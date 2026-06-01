@@ -1,0 +1,79 @@
+@import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 215 28% 7%;
+    --foreground: 213 31% 91%;
+    --card: 217 27% 12%;
+    --card-foreground: 213 31% 91%;
+    --popover: 217 27% 12%;
+    --popover-foreground: 213 31% 91%;
+    --primary: 217 91% 60%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 215 25% 18%;
+    --secondary-foreground: 213 31% 91%;
+    --muted: 215 25% 18%;
+    --muted-foreground: 215 20% 65%;
+    --accent: 217 91% 60%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 215 25% 20%;
+    --input: 215 25% 18%;
+    --ring: 217 91% 60%;
+    --radius: 0.5rem;
+  }
+}
+
+* {
+  box-sizing: border-box;
+  border-color: hsl(var(--border));
+}
+
+html {
+  direction: rtl;
+}
+
+body {
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
+  font-family: 'Tajawal', sans-serif;
+  direction: rtl;
+  margin: 0;
+  padding: 0;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: hsl(var(--background)); }
+::-webkit-scrollbar-thumb { background: hsl(var(--border)); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: hsl(var(--muted-foreground)); }
+
+/* Print styles for receipts */
+@media print {
+  .no-print { display: none !important; }
+  body { background: white !important; color: black !important; direction: rtl; }
+  .print-only { display: block !important; }
+}
+
+.print-only { display: none; }
+
+/* Recharts RTL fix */
+.recharts-wrapper {
+  direction: ltr;
+}
+
+/* Loading skeleton animation */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, hsl(var(--muted)) 25%, hsl(var(--secondary)) 50%, hsl(var(--muted)) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
