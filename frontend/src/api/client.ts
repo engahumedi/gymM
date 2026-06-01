@@ -17,8 +17,10 @@ function processQueue(error: AxiosError | null) {
   retryQueue = [];
 }
 
+// In production, VITE_API_URL = https://your-backend.onrender.com/api/v1
+// In dev, Vite proxy handles /api → localhost:3001
 export const apiClient = axios.create({
-  baseURL: '/api/v1',
+  baseURL: import.meta.env.VITE_API_URL || '/api/v1',
   withCredentials: true,
   headers: { 'Content-Type': 'application/json' },
 });

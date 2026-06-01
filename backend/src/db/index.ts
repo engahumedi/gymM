@@ -2,7 +2,8 @@ import Database from 'better-sqlite3';
 import path from 'path';
 import { runMigrations } from './migrations';
 
-const DB_PATH = path.join(process.cwd(), 'gym.db');
+// On Render: DB_PATH=/data/gym.db (persistent disk). Locally: ./gym.db
+const DB_PATH = process.env.DB_PATH || path.join(process.cwd(), 'gym.db');
 
 let _db: Database.Database | null = null;
 
@@ -16,11 +17,11 @@ export function getDb(): Database.Database {
   return _db;
 }
 
-export const db = new Proxy({} as Database.Database, {
+export const db: Database.Database = new Proxy({} as Database.Database, {
   get(_target, prop) {
     return (getDb() as any)[prop];
   },
-});
+}) as any;
 
 export function initDb(): void {
   getDb();

@@ -6,10 +6,12 @@ import { autoExpireSubscriptions } from '../services/subscription.service';
 
 const router = Router();
 
+const isProd = process.env.NODE_ENV === 'production';
 const COOKIE_OPTS = {
   httpOnly: true,
-  secure: process.env.NODE_ENV === 'production',
-  sameSite: (process.env.NODE_ENV === 'production' ? 'strict' : 'lax') as 'strict' | 'lax',
+  secure: isProd,
+  // cross-domain (Vercel frontend → Render backend) requires sameSite:'none' + secure:true
+  sameSite: (isProd ? 'none' : 'lax') as 'none' | 'lax',
 };
 
 router.post('/login', (req: Request, res: Response) => {

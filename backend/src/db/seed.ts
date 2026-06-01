@@ -6,6 +6,15 @@ function seedDatabase() {
   initDb();
   const db = getDb();
 
+  // In production, skip if already seeded to preserve real data
+  if (process.env.NODE_ENV === 'production') {
+    const { count } = db.prepare('SELECT COUNT(*) as count FROM users').get() as { count: number };
+    if (count > 0) {
+      console.log('✅ Database already seeded, skipping...');
+      return;
+    }
+  }
+
   console.log('🌱 Seeding database...');
 
   // Clear existing data (except settings structure)
@@ -210,8 +219,8 @@ function seedDatabase() {
     const startDate = addDays(todayStr, scenario.startOffset);
     let endDate = addDays(startDate, duration - 1);
 
-    if ('forceEndOffset' in scenario && scenario.forceEndOffset !== undefined) {
-      endDate = addDays(todayStr, scenario.forceEndOffset);
+    if ('forceEndOffset' in scenario && scenario.forceEndOffset != null) {
+      endDate = addDays(todayStr, scenario.forceEndOffset as number);
     }
 
     const createdAt = `${startDate}T10:00:00`;

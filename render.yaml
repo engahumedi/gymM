@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: gym-api
+    env: node
+    region: oregon
+    plan: free
+    buildCommand: cd backend && npm ci && npm run build && NODE_ENV=production npx tsx src/db/seed.ts
+    startCommand: cd backend && node dist/index.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: JWT_SECRET
+        generateValue: true
+      - key: REFRESH_TOKEN_SECRET
+        generateValue: true
+      - key: DB_PATH
+        value: /data/gym.db
+      - key: CORS_ORIGIN
+        sync: false   # ← set this to your Vercel frontend URL after deploy
+    disk:
+      name: gym-sqlite
+      mountPath: /data
+      sizeGB: 1
