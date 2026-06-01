@@ -7,11 +7,11 @@ import { autoExpireSubscriptions } from '../services/subscription.service';
 const router = Router();
 
 const isProd = process.env.NODE_ENV === 'production';
+// Frontend and API are on the same origin in production (both served by Express).
 const COOKIE_OPTS = {
   httpOnly: true,
   secure: isProd,
-  // cross-domain (Vercel frontend → Render backend) requires sameSite:'none' + secure:true
-  sameSite: (isProd ? 'none' : 'lax') as 'none' | 'lax',
+  sameSite: 'lax' as const,
 };
 
 router.post('/login', (req: Request, res: Response) => {
