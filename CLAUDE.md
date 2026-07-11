@@ -31,8 +31,8 @@ English (LTR) toggle.
   correctly in RTL (layout, tables, charts, icons).
 
 ## Current status (2026-07-11)
-Phases **1–5 done** and verified on the live Supabase project (`hfjyaduiynigylvunnto`).
-**Next: Phase 6** (analytics dashboard). UI polish deferred to Phase 8 (owner's call) —
+Phases **1–6 done** and verified on the live Supabase project (`hfjyaduiynigylvunnto`).
+**Next: Phase 7** (public website + Join Now). UI polish deferred to Phase 8 (owner's call) —
 build functionality first. Develop on branch
 `claude/gym-system-bootstrap-mnn1vh` (in sync with `main`). See the **Handoff** section at the
 top of `PROGRESS.md` for what to request from the user (Supabase URL + anon key for `.env`; a

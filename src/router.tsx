@@ -14,6 +14,13 @@ import { MemberProfile } from '@/pages/dashboard/members/MemberProfile';
 import { PlansList } from '@/pages/dashboard/plans/PlansList';
 import { CheckInScreen } from '@/pages/dashboard/CheckInScreen';
 import { PaymentsList } from '@/pages/dashboard/payments/PaymentsList';
+import { lazy, Suspense } from 'react';
+import { FullPageSpinner } from '@/components/FullPageSpinner';
+
+// Analytics pulls in Recharts (heavy) — load it only when the route is visited.
+const Analytics = lazy(() =>
+  import('@/pages/dashboard/analytics/Analytics').then((m) => ({ default: m.Analytics })),
+);
 import { ReceiptView } from '@/pages/ReceiptView';
 import { PortalHome } from '@/pages/portal/PortalHome';
 import { PortalPayments, PortalCheckins } from '@/pages/portal/PortalHistory';
@@ -67,7 +74,16 @@ export const router = createHashRouter([
           </Guard>
         ),
       },
-      { path: 'analytics', element: <Placeholder titleKey="dashboard.analytics" /> },
+      {
+        path: 'analytics',
+        element: (
+          <Guard allow={['super_admin']}>
+            <Suspense fallback={<FullPageSpinner />}>
+              <Analytics />
+            </Suspense>
+          </Guard>
+        ),
+      },
       { path: 'settings', element: <Placeholder titleKey="dashboard.settings" /> },
     ],
   },

@@ -174,3 +174,19 @@
 - **Member "request renewal"** reuses `create_subscription(..., activate=false)` to insert a
   `pending` subscription (allowed by the `subs_member_request` RLS policy); reception activates
   it after payment. No separate RPC needed.
+
+## Phase 6 — Analytics dashboard
+
+- **Client-side aggregation** (no SQL views/RPCs). At this scale (hundreds of rows) pulling the
+  RLS-scoped members/payments/check-ins and aggregating in `src/lib/analytics.ts` is simpler and
+  keeps analytics logic in one testable place. If data grows, promote the hot aggregations to
+  SQL views later — the fetch layer already isolates them.
+- **KPIs are honest but simple proxies** (renewal rate = members with >1 non-pending sub;
+  churn = members whose current sub is expired) as the spec's "simple version" allows; labelled
+  so they aren't mistaken for exact cohort math.
+- **Heatmap is a custom CSS grid**, not Recharts (which has no heatmap); hours/day computed in
+  Asia/Riyadh via `Intl`. Charts are wrapped `dir="ltr"` to avoid Recharts RTL mirroring quirks
+  — an accepted Phase-8 polish item.
+- **Analytics route is lazy-loaded** (`React.lazy`) so Recharts (~400 KB) is a separate chunk
+  fetched only when a super-admin opens analytics, keeping the initial bundle lean.
+- **CSV export** is a tiny client helper with a UTF-8 BOM so Excel renders Arabic correctly.
