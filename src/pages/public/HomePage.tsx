@@ -3,7 +3,7 @@ import { useI18n } from '@/i18n/I18nProvider';
 import { usePublicData } from '@/lib/PublicData';
 import { localizedName } from '@/lib/display';
 import { InlineLoading } from '@/components/ui/misc';
-import { ArrowUpRight, MapPin, ICON_SM } from '@/components/ui/icons';
+import { ArrowUpRight, MapPin, LogIn, ICON_SM } from '@/components/ui/icons';
 import { Section, PlanCard, pick } from './components';
 
 export function HomePage() {
@@ -35,6 +35,9 @@ export function HomePage() {
             </Link>
             <Link to="/plans" className="inline-flex items-center gap-1.5 text-sm font-semibold text-text hover:text-accent">
               {t('pub.hero.plans')} <ArrowUpRight {...ICON_SM} />
+            </Link>
+            <Link to="/login" className="inline-flex items-center gap-1.5 text-sm text-muted hover:text-text">
+              <LogIn {...ICON_SM} /> {t('nav.login')}
             </Link>
           </div>
         </div>
