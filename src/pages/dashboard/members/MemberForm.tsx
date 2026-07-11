@@ -6,7 +6,7 @@ import { useAuth } from '@/auth/AuthProvider';
 import { useReferenceData } from '@/lib/ReferenceData';
 import { createMember, updateMember, fetchMember, uploadMemberPhoto } from '@/lib/api';
 import { useAsync } from '@/lib/useAsync';
-import { normalizeSaudiPhone, SAUDI_PHONE_RE } from '@/lib/phone';
+import { normalizeSaudiPhone, SAUDI_PHONE_RE, SAUDI_ID_RE } from '@/lib/phone';
 import { errorMessageKey } from '@/lib/errors';
 import { localizedName } from '@/lib/display';
 import { Field, TextInput, SelectInput, TextArea } from '@/components/ui/Field';
@@ -17,6 +17,7 @@ import type { MessageKey } from '@/i18n/dictionary';
 const schema = z.object({
   full_name: z.string().trim().min(2),
   phone: z.string().trim().regex(SAUDI_PHONE_RE),
+  national_id: z.string().trim().regex(SAUDI_ID_RE),
   gender: z.enum(['male', 'female']).nullable(),
   dob: z.string().nullable(),
   branch_id: z.string().uuid(),
@@ -39,6 +40,7 @@ export function MemberForm() {
   const [form, setForm] = useState({
     full_name: '',
     phone: '',
+    national_id: '',
     gender: '' as '' | 'male' | 'female',
     dob: '',
     branch_id: profile?.branch_id ?? '',
@@ -58,6 +60,7 @@ export function MemberForm() {
     setForm({
       full_name: m.full_name,
       phone: m.phone,
+      national_id: m.national_id ?? '',
       gender: (m.gender as 'male' | 'female' | null) ?? '',
       dob: m.dob ?? '',
       branch_id: m.branch_id ?? '',
@@ -124,9 +127,14 @@ export function MemberForm() {
           <TextInput value={form.full_name} onChange={(e) => set('full_name', e.target.value)} />
         </Field>
 
-        <Field label={t('member.field.phone')} required error={fieldErr.phone ? t('err.invalid_phone') : undefined}>
-          <TextInput dir="ltr" placeholder="05XXXXXXXX" value={form.phone} onChange={(e) => set('phone', e.target.value)} />
-        </Field>
+        <div className="grid grid-cols-2 gap-4">
+          <Field label={t('member.field.phone')} required error={fieldErr.phone ? t('err.invalid_phone') : undefined}>
+            <TextInput dir="ltr" placeholder="05XXXXXXXX" value={form.phone} onChange={(e) => set('phone', e.target.value)} />
+          </Field>
+          <Field label={t('member.field.national_id')} required error={fieldErr.national_id ? t('err.invalid_national_id') : undefined}>
+            <TextInput dir="ltr" inputMode="numeric" maxLength={10} placeholder="1XXXXXXXXX" value={form.national_id} onChange={(e) => set('national_id', e.target.value)} />
+          </Field>
+        </div>
 
         <div className="grid grid-cols-2 gap-4">
           <Field label={t('member.field.gender')}>

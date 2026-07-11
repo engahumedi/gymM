@@ -23,7 +23,7 @@ truncate table public.notifications, public.check_ins, public.freezes,
 insert into public.gyms (id, name_ar, name_en, primary_color, secondary_color, contact_email, contact_phone, social_links)
 values (
   '11111111-1111-1111-1111-111111111111',
-  'نادي القوة', 'Power Gym',
+  'أبطال الرياضة', 'Sports Champions',
   '#e11d2a', '#0f172a',
   'info@powergym.sa', '+966112223344',
   '{"instagram":"https://instagram.com/powergym","twitter":"https://x.com/powergym","tiktok":"https://tiktok.com/@powergym","whatsapp":"+966500000000"}'
@@ -68,7 +68,7 @@ values
 -- -----------------------------------------------------------------------------
 insert into public.site_content (gym_id, key, content) values
 ('11111111-1111-1111-1111-111111111111','hero',
- '{"title_ar":"طوّر قوتك في نادي القوة","title_en":"Build Your Strength at Power Gym","subtitle_ar":"أحدث الأجهزة ومدربون محترفون في فرعين بالرياض","subtitle_en":"State-of-the-art equipment and pro coaches across two Riyadh branches"}'),
+ '{"title_ar":"طوّر قوتك في أبطال الرياضة","title_en":"Build Your Strength at Sports Champions","subtitle_ar":"أحدث الأجهزة ومدربون محترفون في فرعين بالرياض","subtitle_en":"State-of-the-art equipment and pro coaches across two Riyadh branches"}'),
 ('11111111-1111-1111-1111-111111111111','faq',
  '{"items":[{"q_ar":"هل يمكنني تجميد اشتراكي؟","a_ar":"نعم، حسب باقة أيام التجميد في خطتك.","q_en":"Can I freeze my subscription?","a_en":"Yes, up to your plan freeze allowance."},{"q_ar":"هل يوجد وصول لكل الفروع؟","a_ar":"الخطط النصف سنوية والسنوية تتيح الوصول لكل الفروع.","q_en":"Is there all-branch access?","a_en":"Semi-annual and annual plans include all-branch access."}]}'),
 ('11111111-1111-1111-1111-111111111111','testimonials',
@@ -146,10 +146,11 @@ begin
     end if;
 
     -- Member
-    insert into public.members (gym_id, branch_id, full_name, phone, gender, dob,
+    insert into public.members (gym_id, branch_id, full_name, phone, national_id, gender, dob,
                                 emergency_contact_name, emergency_contact_phone, notes)
     values (v_gym, v_branch, v_name,
             '05' || (10000000 + i)::text,
+            '1' || (1000000000 + i)::text,
             v_gender,
             date '1990-01-01' + ((i * 137) % 4000),
             'ولي الأمر', '05' || (19000000 + i)::text,

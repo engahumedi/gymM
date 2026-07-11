@@ -56,6 +56,7 @@ export interface Member {
   member_code: string | null;
   full_name: string;
   phone: string;
+  national_id: string | null;
   gender: Gender | null;
   dob: string | null;
   photo_url: string | null;

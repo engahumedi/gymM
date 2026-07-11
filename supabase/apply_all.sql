@@ -1,14 +1,7 @@
--- =============================================================================
--- apply_all.sql — paste into the Supabase SQL Editor to set up everything:
--- schema + RLS + storage/auth + subscription/checkin/payment/notification/join
--- functions (incl. pg_cron) + demo seed data.
--- NOTE: for the public Join flow, also enable email autoconfirm in Auth settings
--- (Dashboard → Authentication → Providers → Email → Confirm email = off), so
--- sign-ups get a session immediately.
--- Generated from migrations/*.sql + seed.sql. Safe to re-run (seed truncates).
--- =============================================================================
+-- apply_all.sql — full setup bundle (schema→RLS→storage/auth→functions→seed).
+-- For the public Join flow, enable email autoconfirm in Auth settings.
 
--- >>>>>>>>>>>>>>>>>>>>>>>>>>>>  supabase/migrations/0001_schema.sql  <<<<<<<<<<<<<<<<<<<<<<<<<<<<
+-- >>>>>>  supabase/migrations/0001_schema.sql  <<<<<<
 -- =============================================================================
 -- 0001_schema.sql — Gym Management System core schema
 -- Extensions, enums, tables, indexes, triggers. RLS is defined in 0002_rls.sql.
@@ -282,7 +275,7 @@ create table if not exists public.site_content (
 create index if not exists idx_site_content_gym on public.site_content(gym_id);
 
 
--- >>>>>>>>>>>>>>>>>>>>>>>>>>>>  supabase/migrations/0002_rls.sql  <<<<<<<<<<<<<<<<<<<<<<<<<<<<
+-- >>>>>>  supabase/migrations/0002_rls.sql  <<<<<<
 -- =============================================================================
 -- 0002_rls.sql — Row Level Security: helper functions + policies
 -- Deny-by-default: RLS is enabled on every table; absence of a policy = no access.
@@ -552,7 +545,7 @@ create policy notif_admin_write on public.notifications
   with check (is_super_admin() and gym_id = current_gym_id());
 
 
--- >>>>>>>>>>>>>>>>>>>>>>>>>>>>  supabase/migrations/0003_storage_and_auth.sql  <<<<<<<<<<<<<<<<<<<<<<<<<<<<
+-- >>>>>>  supabase/migrations/0003_storage_and_auth.sql  <<<<<<
 -- =============================================================================
 -- 0003_storage_and_auth.sql — Storage buckets + auth->profiles bootstrap
 -- Business-logic RPCs (renew / freeze / upgrade / expire / notifications) are
@@ -625,7 +618,7 @@ create trigger on_auth_user_created
   for each row execute function public.handle_new_user();
 
 
--- >>>>>>>>>>>>>>>>>>>>>>>>>>>>  supabase/migrations/0004_subscription_functions.sql  <<<<<<<<<<<<<<<<<<<<<<<<<<<<
+-- >>>>>>  supabase/migrations/0004_subscription_functions.sql  <<<<<<
 -- =============================================================================
 -- 0004_subscription_functions.sql — subscription lifecycle business logic
 -- Centralised in Postgres RPCs (SECURITY INVOKER, so RLS still applies) to
@@ -923,7 +916,7 @@ grant execute on function
 to authenticated;
 
 
--- >>>>>>>>>>>>>>>>>>>>>>>>>>>>  supabase/migrations/0005_checkin_payment_functions.sql  <<<<<<<<<<<<<<<<<<<<<<<<<<<<
+-- >>>>>>  supabase/migrations/0005_checkin_payment_functions.sql  <<<<<<
 -- =============================================================================
 -- 0005_checkin_payment_functions.sql — Phase 4: check-in + manual payments
 -- RPCs are SECURITY INVOKER so RLS still scopes every write to the caller's
@@ -1015,7 +1008,7 @@ grant execute on function
 to authenticated;
 
 
--- >>>>>>>>>>>>>>>>>>>>>>>>>>>>  supabase/migrations/0006_notifications.sql  <<<<<<<<<<<<<<<<<<<<<<<<<<<<
+-- >>>>>>  supabase/migrations/0006_notifications.sql  <<<<<<
 -- =============================================================================
 -- 0006_notifications.sql — Phase 5: notifications engine
 -- A daily job finds subscriptions expiring in 7/3/1 days and enqueues messages
@@ -1092,7 +1085,7 @@ exception when others then
 end $$;
 
 
--- >>>>>>>>>>>>>>>>>>>>>>>>>>>>  supabase/migrations/0007_public_join.sql  <<<<<<<<<<<<<<<<<<<<<<<<<<<<
+-- >>>>>>  supabase/migrations/0007_public_join.sql  <<<<<<
 -- =============================================================================
 -- 0007_public_join.sql — Phase 7: public "Join Now" flow
 -- A newly signed-up visitor calls public_join() to create their member record
@@ -1148,7 +1141,69 @@ grant execute on function
 to authenticated;
 
 
--- >>>>>>>>>>>>>>>>>>>>>>>>>>>>  supabase/seed.sql  <<<<<<<<<<<<<<<<<<<<<<<<<<<<
+-- >>>>>>  supabase/migrations/0008_national_id_and_rebrand.sql  <<<<<<
+-- =============================================================================
+-- 0008_national_id_and_rebrand.sql
+--  · Adds national ID to members (required in the app registration forms;
+--    nullable at the DB level so existing rows are unaffected).
+--  · public_join gains p_national_id.
+--  · Rebrand the demo gym to "أبطال الرياضة".
+-- =============================================================================
+
+alter table public.members add column if not exists national_id text;
+
+-- Recreate public_join with the national ID captured at sign-up.
+drop function if exists public.public_join(text, text, gender_type, uuid, uuid);
+
+create or replace function public.public_join(
+  p_full_name   text,
+  p_phone       text,
+  p_national_id text,
+  p_gender      gender_type,
+  p_plan_id     uuid,
+  p_branch_id   uuid
+) returns uuid
+language plpgsql security definer set search_path = public as $$
+declare
+  v_uid      uuid := auth.uid();
+  v_gym      uuid;
+  v_member   uuid;
+  v_existing uuid;
+begin
+  if v_uid is null then raise exception 'not_authenticated'; end if;
+  select gym_id into v_gym from public.branches where id = p_branch_id;
+  if v_gym is null then raise exception 'branch_not_found'; end if;
+  if not exists (select 1 from public.plans where id = p_plan_id and gym_id = v_gym) then
+    raise exception 'plan_not_found';
+  end if;
+  select member_id into v_existing from public.profiles where id = v_uid;
+  if v_existing is not null then raise exception 'already_member'; end if;
+
+  insert into public.members (gym_id, branch_id, full_name, phone, national_id, gender, user_id)
+  values (v_gym, p_branch_id, p_full_name, p_phone, p_national_id, p_gender, v_uid)
+  returning id into v_member;
+
+  update public.profiles
+     set member_id = v_member, gym_id = v_gym, full_name = p_full_name
+   where id = v_uid;
+
+  insert into public.subscriptions (member_id, plan_id, branch_id, status)
+  values (v_member, p_plan_id, p_branch_id, 'pending');
+
+  return v_member;
+end $$;
+
+grant execute on function
+  public.public_join(text, text, text, gender_type, uuid, uuid)
+to authenticated;
+
+-- Rebrand
+update public.gyms
+   set name_ar = 'أبطال الرياضة', name_en = 'Sports Champions'
+ where name_ar = 'نادي القوة' or name_en = 'Power Gym';
+
+
+-- >>>>>>  supabase/seed.sql  <<<<<<
 -- =============================================================================
 -- seed.sql — realistic demo data so the dashboard & analytics look alive.
 -- 1 gym, 2 branches, 4 plans, trainers, site content, ~50 members with mixed
@@ -1174,7 +1229,7 @@ truncate table public.notifications, public.check_ins, public.freezes,
 insert into public.gyms (id, name_ar, name_en, primary_color, secondary_color, contact_email, contact_phone, social_links)
 values (
   '11111111-1111-1111-1111-111111111111',
-  'نادي القوة', 'Power Gym',
+  'أبطال الرياضة', 'Sports Champions',
   '#e11d2a', '#0f172a',
   'info@powergym.sa', '+966112223344',
   '{"instagram":"https://instagram.com/powergym","twitter":"https://x.com/powergym","tiktok":"https://tiktok.com/@powergym","whatsapp":"+966500000000"}'
@@ -1219,7 +1274,7 @@ values
 -- -----------------------------------------------------------------------------
 insert into public.site_content (gym_id, key, content) values
 ('11111111-1111-1111-1111-111111111111','hero',
- '{"title_ar":"طوّر قوتك في نادي القوة","title_en":"Build Your Strength at Power Gym","subtitle_ar":"أحدث الأجهزة ومدربون محترفون في فرعين بالرياض","subtitle_en":"State-of-the-art equipment and pro coaches across two Riyadh branches"}'),
+ '{"title_ar":"طوّر قوتك في أبطال الرياضة","title_en":"Build Your Strength at Sports Champions","subtitle_ar":"أحدث الأجهزة ومدربون محترفون في فرعين بالرياض","subtitle_en":"State-of-the-art equipment and pro coaches across two Riyadh branches"}'),
 ('11111111-1111-1111-1111-111111111111','faq',
  '{"items":[{"q_ar":"هل يمكنني تجميد اشتراكي؟","a_ar":"نعم، حسب باقة أيام التجميد في خطتك.","q_en":"Can I freeze my subscription?","a_en":"Yes, up to your plan freeze allowance."},{"q_ar":"هل يوجد وصول لكل الفروع؟","a_ar":"الخطط النصف سنوية والسنوية تتيح الوصول لكل الفروع.","q_en":"Is there all-branch access?","a_en":"Semi-annual and annual plans include all-branch access."}]}'),
 ('11111111-1111-1111-1111-111111111111','testimonials',
@@ -1297,10 +1352,11 @@ begin
     end if;
 
     -- Member
-    insert into public.members (gym_id, branch_id, full_name, phone, gender, dob,
+    insert into public.members (gym_id, branch_id, full_name, phone, national_id, gender, dob,
                                 emergency_contact_name, emergency_contact_phone, notes)
     values (v_gym, v_branch, v_name,
             '05' || (10000000 + i)::text,
+            '1' || (1000000000 + i)::text,
             v_gender,
             date '1990-01-01' + ((i * 137) % 4000),
             'ولي الأمر', '05' || (19000000 + i)::text,
