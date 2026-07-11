@@ -1,0 +1,61 @@
+import { createHashRouter, Navigate } from 'react-router-dom';
+import { PublicLayout } from '@/layouts/PublicLayout';
+import { DashboardLayout } from '@/layouts/DashboardLayout';
+import { PortalLayout } from '@/layouts/PortalLayout';
+import { RequireRole } from '@/auth/RequireRole';
+import { LoginPage } from '@/pages/LoginPage';
+import { HomePage } from '@/pages/public/HomePage';
+import { NotFound } from '@/pages/NotFound';
+import { Placeholder } from '@/pages/Placeholder';
+
+// Hash routing: zero server config on GitHub Pages, never 404s on refresh.
+export const router = createHashRouter([
+  {
+    element: <PublicLayout />,
+    children: [
+      { path: '/', element: <HomePage /> },
+      { path: '/plans', element: <Placeholder titleKey="nav.plans" /> },
+      { path: '/branches', element: <Placeholder titleKey="nav.branches" /> },
+      { path: '/trainers', element: <Placeholder titleKey="nav.trainers" /> },
+      { path: '/contact', element: <Placeholder titleKey="nav.contact" /> },
+      { path: '/join', element: <Placeholder titleKey="nav.join" /> },
+    ],
+  },
+
+  { path: '/login', element: <LoginPage /> },
+
+  {
+    path: '/dashboard',
+    element: (
+      <RequireRole allow={['super_admin', 'reception']}>
+        <DashboardLayout />
+      </RequireRole>
+    ),
+    children: [
+      { index: true, element: <Placeholder titleKey="dashboard.title" /> },
+      { path: 'members', element: <Placeholder titleKey="dashboard.members" /> },
+      { path: 'checkin', element: <Placeholder titleKey="dashboard.checkin" /> },
+      { path: 'payments', element: <Placeholder titleKey="dashboard.payments" /> },
+      { path: 'plans', element: <Placeholder titleKey="dashboard.plans" /> },
+      { path: 'analytics', element: <Placeholder titleKey="dashboard.analytics" /> },
+      { path: 'settings', element: <Placeholder titleKey="dashboard.settings" /> },
+    ],
+  },
+
+  {
+    path: '/portal',
+    element: (
+      <RequireRole allow={['member']}>
+        <PortalLayout />
+      </RequireRole>
+    ),
+    children: [
+      { index: true, element: <Placeholder titleKey="portal.subscription" /> },
+      { path: 'payments', element: <Placeholder titleKey="portal.payments" /> },
+      { path: 'checkins', element: <Placeholder titleKey="portal.checkins" /> },
+    ],
+  },
+
+  { path: '/404', element: <NotFound /> },
+  { path: '*', element: <Navigate to="/404" replace /> },
+]);
