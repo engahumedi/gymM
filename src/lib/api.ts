@@ -245,6 +245,17 @@ export async function fetchPaymentWithMember(id: string): Promise<PaymentWithMem
   ) as unknown as PaymentWithMember;
 }
 
+// All check-ins within scope (for analytics: heatmap, trends). RLS-scoped.
+export async function fetchAllCheckIns(): Promise<CheckIn[]> {
+  return unwrap(
+    await supabase
+      .from('check_ins')
+      .select('id, member_id, branch_id, subscription_id, checked_in_at, recorded_by')
+      .order('checked_in_at', { ascending: false })
+      .limit(5000),
+  );
+}
+
 // Today's check-ins at the current scope (for the check-in screen feed).
 export interface CheckInWithMember extends CheckIn {
   members: { full_name: string; member_code: string | null } | null;
