@@ -190,3 +190,19 @@
 - **Analytics route is lazy-loaded** (`React.lazy`) so Recharts (~400 KB) is a separate chunk
   fetched only when a super-admin opens analytics, keeping the initial bundle lean.
 - **CSV export** is a tiny client helper with a UTF-8 BOM so Excel renders Arabic correctly.
+
+## Phase 7 — Public website + Join Now
+
+- **Join is one SECURITY DEFINER RPC** (`public_join`) called right after `signUp`. A self-serve
+  member can't insert into `members`/`subscriptions` under RLS, so the RPC does it, tightly
+  scoped to the caller's `auth.uid()` (one member per user, `already_member` guard). This avoids
+  loosening any RLS policy for the public.
+- **Email autoconfirm is ON** so `signUp` yields an immediate session and the join RPC can run in
+  the same step (no email round-trip). Reasonable for a gym where email is just a login; noted in
+  README/PROGRESS for fresh-project setup.
+- **Pending queue reuses existing surfaces:** a join creates a `pending` subscription in the
+  chosen branch, which shows in the reception dashboard's "pending activations" panel (RLS-scoped)
+  and is activated from the member profile — no separate queue screen needed.
+- **The whole marketing site is data-driven** via `PublicDataProvider` (gym, plans, branches,
+  trainers, `site_content`), all anon-readable, so a new gym rebrands by editing rows. `site_content`
+  is a generic key→JSON store (hero/faq/testimonials/facilities) to avoid a table per section.

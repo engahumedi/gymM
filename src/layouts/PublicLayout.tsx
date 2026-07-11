@@ -3,6 +3,7 @@ import { useI18n } from '@/i18n/I18nProvider';
 import { useAuth } from '@/auth/AuthProvider';
 import { roleHome } from '@/auth/roleHome';
 import { LangToggle } from '@/components/LangToggle';
+import { PublicDataProvider } from '@/lib/PublicData';
 import type { MessageKey } from '@/i18n/dictionary';
 
 const navItems: { to: string; key: MessageKey }[] = [
@@ -73,7 +74,9 @@ export function PublicLayout() {
       </header>
 
       <main className="flex-1">
-        <Outlet />
+        <PublicDataProvider>
+          <Outlet />
+        </PublicDataProvider>
       </main>
 
       <footer className="border-t border-white/10 py-6 text-center text-sm text-slate-400">
