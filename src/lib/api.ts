@@ -67,6 +67,7 @@ export interface MemberInsert {
   branch_id: string;
   full_name: string;
   phone: string;
+  national_id?: string | null;
   gender?: string | null;
   dob?: string | null;
   photo_url?: string | null;
@@ -300,6 +301,7 @@ export async function signUpAndJoin(params: {
   password: string;
   fullName: string;
   phone: string;
+  nationalId: string;
   gender: Gender | null;
   planId: string;
   branchId: string;
@@ -314,6 +316,7 @@ export async function signUpAndJoin(params: {
   return rpcCall<string>('public_join', {
     p_full_name: params.fullName,
     p_phone: params.phone,
+    p_national_id: params.nationalId,
     p_gender: params.gender,
     p_plan_id: params.planId,
     p_branch_id: params.branchId,

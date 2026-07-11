@@ -8,6 +8,10 @@ export const saudiPhoneSchema = z
   .trim()
   .regex(SAUDI_PHONE_RE, 'invalid_phone');
 
+// Saudi national ID / Iqama: 10 digits, starting 1 (citizen) or 2 (resident).
+export const SAUDI_ID_RE = /^[12][0-9]{9}$/;
+export const saudiIdSchema = z.string().trim().regex(SAUDI_ID_RE, 'invalid_national_id');
+
 // Normalise +9665… and 5… inputs to the canonical 05XXXXXXXX form.
 export function normalizeSaudiPhone(input: string): string {
   const s = input.trim().replace(/\s|-/g, '');

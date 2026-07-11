@@ -18,7 +18,8 @@ import { StatusBadge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { SelectInput, Field } from '@/components/ui/Field';
-import { Card, EmptyState, InlineLoading, ErrorText } from '@/components/ui/misc';
+import { Card, EmptyState, InlineLoading, ErrorText, DaysLeft } from '@/components/ui/misc';
+import { daysUntil } from '@/lib/format';
 
 export function PortalHome() {
   const { t, locale } = useI18n();
@@ -48,11 +49,23 @@ export function PortalHome() {
           <StatusBadge status={status} />
         </div>
         {current && current.status !== 'pending' ? (
-          <div className="grid grid-cols-2 gap-y-2 text-sm">
-            <span className="text-muted">{t('portal.plan')}</span>
-            <span className="font-medium">{planName(current.plan_id)}</span>
-            <span className="text-muted">{t('portal.expiry')}</span>
-            <span className="font-medium">{formatDate(current.end_date, locale)}</span>
+          <div className="flex flex-wrap items-end gap-x-10 gap-y-4">
+            <div>
+              <p className="text-xs text-muted">{t('portal.plan')}</p>
+              <p className="mt-1 font-medium text-text">{planName(current.plan_id)}</p>
+            </div>
+            <div>
+              <p className="text-xs text-muted">{t('portal.expiry')}</p>
+              <p className="mt-1 font-medium text-text">{formatDate(current.end_date, locale)}</p>
+            </div>
+            <div>
+              <p className="text-xs text-muted">{t('portal.remaining')}</p>
+              <p className="font-display mt-1 text-2xl leading-none">
+                {(() => { const d = daysUntil(current.end_date); return d !== null && d >= 0 ? d : 0; })()}
+                <span className="ms-1.5 align-baseline text-xs text-muted">{t('common.days')}</span>
+              </p>
+            </div>
+            <div className="pb-1"><DaysLeft end={current.end_date} /></div>
           </div>
         ) : (
           <p className="text-sm text-muted">{t('portal.no_active_sub')}</p>

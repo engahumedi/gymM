@@ -78,6 +78,15 @@ Full UI redesign to an **editorial-athletic** aesthetic (owner-approved), follow
   `rgb(13,15,18)`, asymmetric editorial layout, single crimson action, no page errors.
 - Live GitHub Pages deploy verified after merge.
 
+### Post-launch tweaks (owner requests) ✅
+- Rebranded the gym to **أبطال الرياضة** / Sports Champions (dictionary `app.name` + `gyms` row + seed).
+- Added **national ID** to members (`0008` migration; required in reception + Join forms with
+  Saudi-ID validation, shown on the profile; `public_join` gained `p_national_id`; live members backfilled).
+- Members list (reception + admin) now shows **subscription start / expiry + a days-remaining counter**.
+- Member portal shows a **days-remaining counter** beside the expiry date.
+- Redesigned the **peak-hours heatmap** (aligned grid, hour ticks, day labels, legend).
+- `npm run build` passes; new `public_join(national_id)` tested live end-to-end.
+
 ### Phase 7 — Public website + Join Now (2026-07-11) ✅
 **DB (`0007_public_join.sql`, applied live):** `public_join(full_name, phone, gender, plan, branch)`
 — SECURITY DEFINER, scoped to `auth.uid()`: creates the member (links `user_id`), sets
