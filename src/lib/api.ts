@@ -3,6 +3,7 @@ import type {
   Branch,
   CheckIn,
   Freeze,
+  Gym,
   Member,
   Payment,
   PaymentMethod,
@@ -28,6 +29,10 @@ async function rpcCall<T>(name: string, args: Record<string, unknown>): Promise<
 }
 
 // ---- Reference data -------------------------------------------------------
+export async function fetchGym(): Promise<Gym | null> {
+  return unwrap(await supabase.from('gyms').select('*').limit(1).maybeSingle());
+}
+
 export async function fetchBranches(): Promise<Branch[]> {
   return unwrap(await supabase.from('branches').select('*').order('name_ar'));
 }
@@ -192,6 +197,70 @@ export async function upgradeSubscription(
     p_method: pay?.method ?? 'cash',
     p_receipt: pay?.receipt ?? null,
   });
+}
+
+// ---- Check-in + payments (Phase 4) ---------------------------------------
+export async function recordCheckIn(memberId: string, branchId: string): Promise<CheckIn> {
+  return rpcCall<CheckIn>('record_check_in', { p_member_id: memberId, p_branch_id: branchId });
+}
+
+export async function recordPayment(
+  memberId: string,
+  subscriptionId: string | null,
+  amount: number,
+  method: PaymentMethod,
+  receipt: string | null,
+): Promise<Payment> {
+  return rpcCall<Payment>('record_payment', {
+    p_member_id: memberId,
+    p_subscription_id: subscriptionId,
+    p_amount: amount,
+    p_method: method,
+    p_receipt: receipt,
+  });
+}
+
+// Payment rows joined with the member (for the payments list + receipt).
+export interface PaymentWithMember extends Payment {
+  members: { full_name: string; member_code: string | null } | null;
+}
+
+export async function fetchAllPayments(): Promise<PaymentWithMember[]> {
+  return unwrap(
+    await supabase
+      .from('payments')
+      .select('*, members(full_name, member_code)')
+      .order('created_at', { ascending: false })
+      .limit(200),
+  ) as unknown as PaymentWithMember[];
+}
+
+export async function fetchPaymentWithMember(id: string): Promise<PaymentWithMember> {
+  return unwrap(
+    await supabase
+      .from('payments')
+      .select('*, members(full_name, member_code)')
+      .eq('id', id)
+      .single(),
+  ) as unknown as PaymentWithMember;
+}
+
+// Today's check-ins at the current scope (for the check-in screen feed).
+export interface CheckInWithMember extends CheckIn {
+  members: { full_name: string; member_code: string | null } | null;
+}
+
+export async function fetchTodayCheckIns(): Promise<CheckInWithMember[]> {
+  const since = new Date();
+  since.setHours(0, 0, 0, 0);
+  return unwrap(
+    await supabase
+      .from('check_ins')
+      .select('*, members(full_name, member_code)')
+      .gte('checked_in_at', since.toISOString())
+      .order('checked_in_at', { ascending: false })
+      .limit(50),
+  ) as unknown as CheckInWithMember[];
 }
 
 // ---- Member photo (private bucket) ---------------------------------------

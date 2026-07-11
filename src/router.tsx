@@ -12,6 +12,9 @@ import { MembersList } from '@/pages/dashboard/members/MembersList';
 import { MemberForm } from '@/pages/dashboard/members/MemberForm';
 import { MemberProfile } from '@/pages/dashboard/members/MemberProfile';
 import { PlansList } from '@/pages/dashboard/plans/PlansList';
+import { CheckInScreen } from '@/pages/dashboard/CheckInScreen';
+import { PaymentsList } from '@/pages/dashboard/payments/PaymentsList';
+import { ReceiptView } from '@/pages/ReceiptView';
 import { RequireRole as Guard } from '@/auth/RequireRole';
 
 // Hash routing: zero server config on GitHub Pages, never 404s on refresh.
@@ -31,6 +34,15 @@ export const router = createHashRouter([
   { path: '/login', element: <LoginPage /> },
 
   {
+    path: '/receipt/:id',
+    element: (
+      <Guard allow={['super_admin', 'reception']}>
+        <ReceiptView />
+      </Guard>
+    ),
+  },
+
+  {
     path: '/dashboard',
     element: (
       <RequireRole allow={['super_admin', 'reception']}>
@@ -43,8 +55,8 @@ export const router = createHashRouter([
       { path: 'members/new', element: <MemberForm /> },
       { path: 'members/:id', element: <MemberProfile /> },
       { path: 'members/:id/edit', element: <MemberForm /> },
-      { path: 'checkin', element: <Placeholder titleKey="dashboard.checkin" /> },
-      { path: 'payments', element: <Placeholder titleKey="dashboard.payments" /> },
+      { path: 'checkin', element: <CheckInScreen /> },
+      { path: 'payments', element: <PaymentsList /> },
       {
         path: 'plans',
         element: (
