@@ -30,5 +30,12 @@ English (LTR) toggle.
 - **All strings via the i18n dictionary — no hardcoded text.** Everything must mirror
   correctly in RTL (layout, tables, charts, icons).
 
+## Current status (2026-07-11)
+Phases **1–3 done** and verified on the live Supabase project (`hfjyaduiynigylvunnto`).
+**Next: Phase 4** (check-in + manual payments). Develop on branch
+`claude/gym-system-bootstrap-mnn1vh` (in sync with `main`). See the **Handoff** section at the
+top of `PROGRESS.md` for what to request from the user (Supabase URL + anon key for `.env`; a
+`sbp_` PAT to apply migrations over HTTPS) and the sandbox networking notes.
+
 ## Pointer
 Full requirements live in **SPEC.md** — read the relevant section before starting any phase.

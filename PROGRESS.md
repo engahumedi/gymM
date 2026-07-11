@@ -14,6 +14,31 @@ failure-case testing, and is committed.
 
 **Current phase: 4** — Phases 1–3 complete and verified against the live Supabase project.
 
+## Handoff — read this first in a new session
+
+- **Repo layout:** `main` contains Phases 1–3 (merged via PR #1, #2). Continue development on
+  branch **`claude/gym-system-bootstrap-mnn1vh`** (it is in sync with `main`). Docs live at the
+  repo root: `SPEC.md`, `CLAUDE.md`, `PROGRESS.md`, `DECISIONS.md`, `README.md`.
+- **Next up: Phase 4** — fast check-in screen + manual payments with printable receipt.
+- **Live Supabase project:** URL `https://hfjyaduiynigylvunnto.supabase.co` (ref
+  `hfjyaduiynigylvunnto`, Postgres 17). Schema + RLS + functions + seed are already applied.
+- **What a new session must get from the user** (nothing secret is committed):
+  1. `VITE_SUPABASE_URL` + **anon** key → create a local `.env` (gitignored) so `npm run
+     dev/build` hit the live project. The anon key is client-safe (RLS protects data).
+  2. To apply *new* migrations: a Supabase **personal access token** (`sbp_…`). This sandbox
+     only allows outbound HTTPS, so raw Postgres (5432/6543) is unreachable — run SQL via the
+     Management API: `POST https://api.supabase.com/v1/projects/<ref>/database/query`
+     with `Authorization: Bearer <PAT>` and body `{"query":"…"}`. (Or the user pastes
+     `supabase/apply_all.sql` / the new migration into the dashboard SQL Editor.)
+- **Demo logins** (password `GymDemo#2026`): `admin@powergym.sa` (super_admin),
+  `reception.olaya@powergym.sa` / `reception.malqa@powergym.sa` (reception),
+  `member@powergym.sa` (member).
+- **Sandbox limitation:** the headless browser can't tunnel to Supabase here, so verify
+  authenticated flows through their data layer (curl against PostgREST with a user JWT / the
+  Management API) rather than a rendered browser session. Build + these checks are the bar.
+- **Still manual (repo owner, for live Pages):** add the two `VITE_SUPABASE_*` values as GitHub
+  Actions secrets and set Pages source to "GitHub Actions" (see README).
+
 ## Session notes
 <!-- Append a short report after each phase: what was tested, what passed, what was fixed. -->
 
