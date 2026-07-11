@@ -2,6 +2,7 @@ import { Link, NavLink, Outlet } from 'react-router-dom';
 import { useI18n } from '@/i18n/I18nProvider';
 import { useAuth } from '@/auth/AuthProvider';
 import { LangToggle } from '@/components/LangToggle';
+import { ReferenceDataProvider } from '@/lib/ReferenceData';
 import type { MessageKey } from '@/i18n/dictionary';
 import type { UserRole } from '@/lib/database.types';
 
@@ -90,7 +91,9 @@ export function DashboardLayout() {
         </nav>
 
         <main className="flex-1 p-4 md:p-6">
-          <Outlet />
+          <ReferenceDataProvider>
+            <Outlet />
+          </ReferenceDataProvider>
         </main>
       </div>
     </div>

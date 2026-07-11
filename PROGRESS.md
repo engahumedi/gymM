@@ -5,14 +5,14 @@ failure-case testing, and is committed.
 
 - [x] **Phase 1** — Supabase schema + RLS + seed data → push initial commit
 - [x] **Phase 2** — Auth + single login with role-based routing (public / dashboard / member layouts)
-- [ ] **Phase 3** — Members + plans + subscriptions core
+- [x] **Phase 3** — Members + plans + subscriptions core
 - [ ] **Phase 4** — Check-in + manual payments
 - [ ] **Phase 5** — Notifications engine
 - [ ] **Phase 6** — Analytics dashboard
 - [ ] **Phase 7** — Public website + Join Now flow
 - [ ] **Phase 8** — Polish: RTL audit, empty states, loading skeletons, error handling → verify Pages deploy
 
-**Current phase: 3** — Phases 1 & 2 complete and verified against the live Supabase project.
+**Current phase: 4** — Phases 1–3 complete and verified against the live Supabase project.
 
 ## Session notes
 <!-- Append a short report after each phase: what was tested, what passed, what was fixed. -->
@@ -101,3 +101,39 @@ fully in a normal browser / on Pages.
 
 **Still manual (repo owner):** add `VITE_SUPABASE_URL` + `VITE_SUPABASE_ANON_KEY` as GitHub
 Actions secrets and enable Pages (Source: GitHub Actions) to go live — steps in README.
+
+### Phase 3 — Members + plans + subscriptions core (2026-07-11) ✅
+**DB (`0004_subscription_functions.sql`, applied live):** `riyadh_today()` plus lifecycle
+RPCs (SECURITY INVOKER, so RLS still applies): `create_subscription`, `activate_subscription`,
+`renew_subscription`, `freeze_subscription`, `unfreeze_subscription`, `upgrade_quote`,
+`upgrade_subscription`, `expire_due_subscriptions`. Execute granted to `authenticated`.
+
+**UI (React):** members list (search by name/phone/code + status/branch filters, RLS-scoped),
+register/edit member form (zod + Saudi-phone validation/normalisation, optional photo upload
+to the private `member-photos` bucket via signed URLs), member profile (photo, status badge,
+current subscription with contextual actions, and Subscriptions/Payments/Check-ins/Freezes
+history tabs), subscription action modal (new/activate/renew/freeze/upgrade with payment
+capture + live prorated upgrade quote), plans management (super-admin CRUD), and a dashboard
+overview with KPI cards. All strings via the i18n dictionary; RTL-aware. Reference data
+(branches/plans) loaded once via a context provider.
+
+**Tested:**
+- `npm run build` passes (tsc strict + vite, 121 modules).
+- **Lifecycle logic on live DB** (temp members, then deleted): activate → today+duration;
+  renew → extends from expiry (stacking unused days); freeze → status frozen, expiry +days,
+  `frozen_days_used` incremented; freeze cap → 8>7 rejected (`freeze_cap_exceeded`), 7 == cap
+  accepted; unfreeze → active; prorated upgrade quote correct (1600 − credit for remaining
+  days) and upgrade resets expiry to today+new duration; payments recorded each step.
+- **Data layer as a real reception user via PostgREST** (the exact calls the UI issues):
+  nested `members?select=*,subscriptions(*)` scoped to the user's branch; member insert
+  (auto `member_code` M00053); `create_subscription`/`renew`/`freeze` RPCs succeed under RLS
+  (proves SECURITY INVOKER + grants work for the app role, not just superuser); registering
+  into another branch is blocked with HTTP 403.
+
+**Fixed during build:** supabase-js generics rejected the hand-written `Insert`/RPC arg types
+(resolved to `never`) even after adding `Relationships`/`CompositeTypes`; kept typed reads and
+cast only write/RPC arguments through a small `rpcCall` helper — runtime unaffected.
+
+**Env limitation (unchanged):** headless-browser click-through still can't tunnel to Supabase
+in this sandbox, so the authenticated screens were verified via their data layer (curl) rather
+than a rendered browser session; they render normally in a real browser / on Pages.

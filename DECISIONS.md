@@ -92,3 +92,38 @@
 - **`.env` is created locally (gitignored)** with the project URL + anon key so `npm run dev/
   build` target the live project. For GitHub Pages, the same two values must be added as
   Actions secrets (documented in README) — they are client-safe (RLS enforces access).
+
+## Phase 3 — Members + plans + subscriptions
+
+- **All subscription lifecycle logic lives in Postgres RPCs** (`0004`), not the client.
+  Reasons: one correct implementation regardless of caller; timezone-correct expiry via
+  `riyadh_today()` (`now() at time zone 'Asia/Riyadh'`); and `SECURITY INVOKER` means RLS
+  still scopes every write, so reception can only touch its own branch. Verified working for
+  the reception role through PostgREST, not just as superuser.
+
+- **Freeze model = explicit days, applied immediately.** `freeze_subscription(days)` validates
+  `frozen_days_used + days <= plan.freeze_allowance_days`, sets status `frozen`, and extends
+  `end_date` by those days at once; `unfreeze` just returns to `active`. Chosen over
+  "compute days on unfreeze" because it is deterministic and matches the spec's "extends expiry
+  by frozen days, capped by allowance" without depending on when staff remember to unfreeze.
+
+- **Renew extends from the later of (current expiry, today)** so unused days are never lost for
+  an active member, and an expired member restarts from today — exactly the spec wording.
+
+- **Upgrade is prorated via `upgrade_quote`** (remaining days × current plan daily rate, where
+  daily rate = price / (duration_months × 30)); the UI shows the due amount live before
+  confirming, and `upgrade_subscription` resets the term to today + new duration.
+
+- **Display status is derived, not just the DB status.** `subscriptionDisplayStatus()` maps a
+  row to active / expiring (≤7 days) / expired / frozen / pending, so "expiring soon" and a
+  lapsed-but-still-`active` row render correctly without a background job. `expire_due_
+  subscriptions()` exists to hard-flip statuses and will run on pg_cron in Phase 5.
+
+- **supabase-js typing:** the generated-style `Database` type still wouldn't satisfy the
+  client's write/RPC generics (args collapsed to `never`), so writes/RPCs are called through a
+  thin `rpcCall` helper / `as never` casts while reads stay fully typed. Purely a
+  compile-time accommodation; no runtime effect. Types can later be replaced with
+  `supabase gen types typescript`.
+
+- **Member photos** go to the private `member-photos` bucket; the profile fetches a short-lived
+  signed URL to display. Keeps member images non-public while staying on the free tier.
