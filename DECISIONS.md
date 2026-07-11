@@ -150,3 +150,27 @@
 
 - **Gym settings added to the reference-data context** (alongside branches/plans) since the
   receipt and future white-label screens need the gym name/branding.
+
+## Phase 5 — Notifications engine
+
+- **Queue-in-the-DB pattern.** `enqueue_expiry_notifications()` (SECURITY DEFINER, daily via
+  pg_cron) writes rows into `notifications`; sending is a separate concern. In dev the rows are
+  `status='simulated'` (logged, never sent). The `notify` Edge Function is the outbound worker
+  that turns `queued` rows into real WhatsApp/SMS and marks them `sent`/`failed`. This keeps
+  "find who to notify" (SQL, testable) cleanly separate from "how to send" (provider code) and
+  matches the spec's "log simulated in dev, plug in Twilio/Meta later" without any schema change.
+
+- **Dedup per (subscription, milestone, day)** so re-running the job — or running it alongside
+  the app — never double-notifies. Milestones are exactly 7/3/1 days before expiry.
+
+- **Provider is swappable behind one `sendMessage()`** in the Edge Function (Twilio | Meta |
+  simulated), selected by `NOTIFY_PROVIDER`. No client or schema change to switch providers.
+
+- **In-app vs messaging split:** staff "in-app" alerts (expiring/expired/pending) are computed
+  live from subscription data on the dashboard — no rows needed. Member in-app alerts read the
+  `notifications` table (RLS-scoped to the member). Only `whatsapp`/`sms` rows are picked up by
+  the outbound Edge Function.
+
+- **Member "request renewal"** reuses `create_subscription(..., activate=false)` to insert a
+  `pending` subscription (allowed by the `subs_member_request` RLS policy); reception activates
+  it after payment. No separate RPC needed.

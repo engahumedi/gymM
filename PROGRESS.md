@@ -7,20 +7,22 @@ failure-case testing, and is committed.
 - [x] **Phase 2** — Auth + single login with role-based routing (public / dashboard / member layouts)
 - [x] **Phase 3** — Members + plans + subscriptions core
 - [x] **Phase 4** — Check-in + manual payments
-- [ ] **Phase 5** — Notifications engine
+- [x] **Phase 5** — Notifications engine
 - [ ] **Phase 6** — Analytics dashboard
 - [ ] **Phase 7** — Public website + Join Now flow
 - [ ] **Phase 8** — Polish: RTL audit, empty states, loading skeletons, error handling → verify Pages deploy
 
-**Current phase: 5** — Phases 1–4 complete and verified against the live Supabase project.
+**Current phase: 6** — Phases 1–5 complete and verified against the live Supabase project.
+UI polish is intentionally deferred to Phase 8 (per the project owner) — functional first.
 
 ## Handoff — read this first in a new session
 
 - **Repo layout:** `main` contains Phases 1–3 (merged via PR #1, #2). Continue development on
   branch **`claude/gym-system-bootstrap-mnn1vh`** (it is in sync with `main`). Docs live at the
   repo root: `SPEC.md`, `CLAUDE.md`, `PROGRESS.md`, `DECISIONS.md`, `README.md`.
-- **Next up: Phase 5** — notifications engine (in-app alerts + Edge Function on pg_cron that
-  finds subscriptions expiring in 7/3/1 days and logs `simulated` messages to `notifications`).
+- **Next up: Phase 6** — analytics dashboard (KPI cards + charts with Recharts + CSV export).
+- **UI note:** the project owner said the current UI is rough and will be polished later
+  (Phase 8). Keep building functionality first; don't over-invest in styling before then.
 - **Live Supabase project:** URL `https://hfjyaduiynigylvunnto.supabase.co` (ref
   `hfjyaduiynigylvunnto`, Postgres 17). Schema + RLS + functions + seed are already applied.
 - **What a new session must get from the user** (nothing secret is committed):
@@ -42,6 +44,37 @@ failure-case testing, and is committed.
 
 ## Session notes
 <!-- Append a short report after each phase: what was tested, what passed, what was fixed. -->
+
+### Phase 5 — Notifications engine (2026-07-11) ✅
+**DB (`0006_notifications.sql`, applied live):** `enqueue_expiry_notifications()` inserts one
+row per (subscription, milestone) for active subs expiring in exactly 7/3/1 days, bilingual
+message, `status='simulated'`, deduped per day (idempotent). Scheduled daily at 06:00 UTC
+(09:00 Riyadh) via **pg_cron** (`expiry-notifications-daily`). **Edge Function**
+`supabase/functions/notify/index.ts` is the real-send abstraction (reads `queued` rows, sends
+via Twilio or Meta WhatsApp behind one `sendMessage()`, marks `sent`/`failed`) — documented,
+not deployed in dev (see README "notifications later").
+
+**UI:** staff dashboard alert panels (expiring this week / pending activations / expired, each
+a linked member list) alongside the KPI cards; member portal home (subscription status card +
+notifications list with mark-as-read + "request renewal" → creates a pending subscription that
+reception activates); member payments & check-ins views. Portal wrapped in the reference-data
+provider. All strings via i18n; RTL-aware.
+
+**Tested (live):**
+- `npm run build` passes (127 modules).
+- `enqueue_expiry_notifications()` created exactly the due rows (`expiring_1`, `expiring_3`),
+  `status=simulated`, `channel=whatsapp`; a second run created 0 (dedup). Bilingual messages
+  correct. **pg_cron job present and active** (`0 6 * * *`).
+- Member flows via PostgREST as the real member: reads only own notifications (RLS-scoped,
+  all mine=true), marks a notification read (RLS update), and "request renewal" creates a
+  `pending` subscription (RLS `subs_member_request`). Test rows cleaned.
+
+**To go live with real messaging:** flip `enqueue` status to `queued`, deploy the `notify`
+Edge Function, set `NOTIFY_PROVIDER` + provider secrets, and schedule it (pg_net/pg_cron or
+external). Documented in the function header + README.
+
+**Env limitation (unchanged):** authenticated screens verified via their data layer (curl),
+not a rendered browser session.
 
 ### Phase 4 — Check-in + manual payments (2026-07-11) ✅
 **DB (`0005_checkin_payment_functions.sql`, applied live):** `record_check_in(member, branch)`

@@ -243,6 +243,31 @@ export const dictionary = {
   'dash.kpi.members': { ar: 'إجمالي الأعضاء', en: 'Total members' },
   'dash.kpi.expiring': { ar: 'ينتهي خلال 7 أيام', en: 'Expiring in 7 days' },
   'dash.kpi.pending': { ar: 'طلبات معلّقة', en: 'Pending sign-ups' },
+  'dash.alerts.expiring': { ar: 'اشتراكات تنتهي هذا الأسبوع', en: 'Expiring this week' },
+  'dash.alerts.expired': { ar: 'اشتراكات منتهية', en: 'Expired' },
+  'dash.alerts.pending': { ar: 'طلبات بانتظار التفعيل', en: 'Pending activations' },
+  'dash.alerts.none': { ar: 'لا يوجد', en: 'None' },
+  'dash.outbox': { ar: 'سجل الإشعارات', en: 'Notifications log' },
+  'dash.outbox.empty': { ar: 'لا توجد إشعارات', en: 'No notifications' },
+
+  // --- notifications ---
+  'notif.title': { ar: 'الإشعارات', en: 'Notifications' },
+  'notif.empty': { ar: 'لا توجد إشعارات', en: 'No notifications' },
+  'notif.mark_read': { ar: 'تحديد كمقروء', en: 'Mark read' },
+  'notif.channel.in_app': { ar: 'داخل النظام', en: 'In-app' },
+  'notif.channel.whatsapp': { ar: 'واتساب', en: 'WhatsApp' },
+  'notif.channel.sms': { ar: 'رسالة نصية', en: 'SMS' },
+
+  // --- member portal (Phase 5) ---
+  'portal.status': { ar: 'حالة اشتراكك', en: 'Your subscription' },
+  'portal.no_active_sub': { ar: 'لا يوجد اشتراك نشط حالياً', en: 'No active subscription' },
+  'portal.request_renewal': { ar: 'طلب تجديد', en: 'Request renewal' },
+  'portal.request.title': { ar: 'طلب تجديد الاشتراك', en: 'Request renewal' },
+  'portal.pick_plan': { ar: 'اختر الباقة', en: 'Choose a plan' },
+  'portal.request_sent': { ar: 'تم إرسال الطلب — فعّله الاستقبال بعد الدفع في الفرع', en: 'Request sent — reception will activate it after payment at the branch' },
+  'portal.pending_note': { ar: 'لديك طلب تجديد معلّق بانتظار التفعيل', en: 'You have a pending renewal awaiting activation' },
+  'portal.plan': { ar: 'الباقة', en: 'Plan' },
+  'portal.expiry': { ar: 'تاريخ الانتهاء', en: 'Expiry date' },
 
   // --- common ---
   'common.save': { ar: 'حفظ', en: 'Save' },

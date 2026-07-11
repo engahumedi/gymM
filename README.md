@@ -88,6 +88,27 @@ Automated via `.github/workflows/deploy.yml` on every push to `main`.
 4. Live URL: `https://<your-username>.github.io/gymM/`
    (if you fork/rename the repo, set the `VITE_BASE` env or edit `vite.config.ts`).
 
+## Notifications (WhatsApp / SMS) — enabling real sending
+
+Out of the box, a daily **pg_cron** job (`enqueue_expiry_notifications`) logs expiry reminders
+(7/3/1 days) to the `notifications` table with `status = 'simulated'` — nothing is sent. To go
+live:
+
+1. Change the enqueue status from `'simulated'` to `'queued'` in
+   `supabase/migrations/0006_notifications.sql` (and re-apply the function).
+2. Deploy the sender: `supabase functions deploy notify`.
+3. Choose a provider and set secrets, e.g. Twilio:
+   ```bash
+   supabase secrets set NOTIFY_PROVIDER=twilio \
+     TWILIO_ACCOUNT_SID=... TWILIO_AUTH_TOKEN=... TWILIO_FROM=whatsapp:+14155238886
+   ```
+   (or `NOTIFY_PROVIDER=meta` with `META_PHONE_ID` / `META_TOKEN`).
+4. Invoke `notify` on a schedule (pg_cron via `pg_net`, or an external cron). It reads `queued`
+   rows, sends them, and marks each `sent` / `failed`.
+
+The provider is swappable behind one `sendMessage()` in `supabase/functions/notify/index.ts` —
+no schema change required.
+
 ## Rebrand for another gym
 
 All branding lives in the `gyms` row and `site_content` / `plans` / `branches` / `trainers`
