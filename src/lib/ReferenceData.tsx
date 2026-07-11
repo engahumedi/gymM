@@ -1,9 +1,10 @@
 import { createContext, useContext, type ReactNode } from 'react';
-import { fetchBranches, fetchPlans } from './api';
+import { fetchBranches, fetchGym, fetchPlans } from './api';
 import { useAsync } from './useAsync';
-import type { Branch, Plan } from './database.types';
+import type { Branch, Gym, Plan } from './database.types';
 
 interface RefData {
+  gym: Gym | null;
   branches: Branch[];
   plans: Plan[];
   loading: boolean;
@@ -17,12 +18,13 @@ const Ctx = createContext<RefData | null>(null);
 export function ReferenceDataProvider({ children }: { children: ReactNode }) {
   const { data, loading, error, reload } = useAsync(
     async () => {
-      const [branches, plans] = await Promise.all([fetchBranches(), fetchPlans()]);
-      return { branches, plans };
+      const [gym, branches, plans] = await Promise.all([fetchGym(), fetchBranches(), fetchPlans()]);
+      return { gym, branches, plans };
     },
     [],
   );
   const value: RefData = {
+    gym: data?.gym ?? null,
     branches: data?.branches ?? [],
     plans: data?.plans ?? [],
     loading,

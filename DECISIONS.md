@@ -127,3 +127,26 @@
 
 - **Member photos** go to the private `member-photos` bucket; the profile fetches a short-lived
   signed URL to display. Keeps member images non-public while staying on the free tier.
+
+## Phase 4 — Check-in + manual payments
+
+- **Check-in is validated server-side** in `record_check_in`, which raises coded exceptions
+  (`checkin_expired`, `checkin_frozen`, …) so the UI shows a specific reason and a one-tap
+  "Renew" shortcut. The client still shows the status badge, but the block is authoritative on
+  the server and cannot be bypassed. Sessions-based plans decrement `sessions_remaining` and
+  are blocked at zero.
+
+- **Cross-branch check-in is intentionally limited for now:** reception can only read members
+  in its own branch (RLS), so it can only check in its own members. All-branch-plan members
+  visiting another branch is an edge case deferred to a later phase (would need a scoped read
+  path); single-branch is the common case and works today.
+
+- **Manual payments** reuse the generic `payments` table via `record_payment` (gym/branch
+  derived from the member). The payments list embeds the member (`payments?select=*,members(...)`)
+  and each row links to a **printable receipt** at a top-level `/receipt/:id` route — kept
+  outside the dashboard layout so `window.print()` output contains only the receipt (action
+  buttons hidden with Tailwind `print:` variants). Gym name on the receipt comes from the
+  `gyms` settings row, so it rebrands automatically.
+
+- **Gym settings added to the reference-data context** (alongside branches/plans) since the
+  receipt and future white-label screens need the gym name/branding.

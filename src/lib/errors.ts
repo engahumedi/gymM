@@ -13,6 +13,12 @@ export function errorMessageKey(message: string | null | undefined): MessageKey 
   if (m.includes('not_pending')) return 'err.not_pending';
   if (m.includes('cannot_renew_cancelled')) return 'err.cancelled';
   if (m.includes('invalid_days')) return 'err.invalid_days';
+  if (m.includes('invalid_amount')) return 'err.invalid_amount';
+  if (m.includes('checkin_no_subscription')) return 'err.checkin_no_sub';
+  if (m.includes('checkin_pending')) return 'err.checkin_pending';
+  if (m.includes('checkin_frozen')) return 'err.checkin_frozen';
+  if (m.includes('checkin_expired')) return 'err.checkin_expired';
+  if (m.includes('checkin_no_sessions')) return 'err.checkin_no_sessions';
   if (m.includes('row-level security') || m.includes('violates row-level')) return 'err.forbidden';
   return 'err.generic';
 }

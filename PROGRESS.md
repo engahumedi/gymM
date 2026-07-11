@@ -6,20 +6,21 @@ failure-case testing, and is committed.
 - [x] **Phase 1** — Supabase schema + RLS + seed data → push initial commit
 - [x] **Phase 2** — Auth + single login with role-based routing (public / dashboard / member layouts)
 - [x] **Phase 3** — Members + plans + subscriptions core
-- [ ] **Phase 4** — Check-in + manual payments
+- [x] **Phase 4** — Check-in + manual payments
 - [ ] **Phase 5** — Notifications engine
 - [ ] **Phase 6** — Analytics dashboard
 - [ ] **Phase 7** — Public website + Join Now flow
 - [ ] **Phase 8** — Polish: RTL audit, empty states, loading skeletons, error handling → verify Pages deploy
 
-**Current phase: 4** — Phases 1–3 complete and verified against the live Supabase project.
+**Current phase: 5** — Phases 1–4 complete and verified against the live Supabase project.
 
 ## Handoff — read this first in a new session
 
 - **Repo layout:** `main` contains Phases 1–3 (merged via PR #1, #2). Continue development on
   branch **`claude/gym-system-bootstrap-mnn1vh`** (it is in sync with `main`). Docs live at the
   repo root: `SPEC.md`, `CLAUDE.md`, `PROGRESS.md`, `DECISIONS.md`, `README.md`.
-- **Next up: Phase 4** — fast check-in screen + manual payments with printable receipt.
+- **Next up: Phase 5** — notifications engine (in-app alerts + Edge Function on pg_cron that
+  finds subscriptions expiring in 7/3/1 days and logs `simulated` messages to `notifications`).
 - **Live Supabase project:** URL `https://hfjyaduiynigylvunnto.supabase.co` (ref
   `hfjyaduiynigylvunnto`, Postgres 17). Schema + RLS + functions + seed are already applied.
 - **What a new session must get from the user** (nothing secret is committed):
@@ -41,6 +42,33 @@ failure-case testing, and is committed.
 
 ## Session notes
 <!-- Append a short report after each phase: what was tested, what passed, what was fixed. -->
+
+### Phase 4 — Check-in + manual payments (2026-07-11) ✅
+**DB (`0005_checkin_payment_functions.sql`, applied live):** `record_check_in(member, branch)`
+— validates the member's current subscription and raises a coded block when needed
+(`checkin_no_subscription | checkin_pending | checkin_frozen | checkin_expired |
+checkin_no_sessions`), logs the visit, and decrements `sessions_remaining` for sessions-based
+plans; `record_payment(member, subscription, amount, method, receipt)` — standalone manual
+payment (gym/branch derived from the member). Both SECURITY INVOKER, granted to `authenticated`.
+
+**UI:** fast check-in screen (search by phone/code/name, member card with photo/status/expiry,
+one-tap check-in, clear block message + "Renew" shortcut on failure, today's check-in feed;
+branch selector for super-admin); payments screen (RLS-scoped list with member join, "record
+payment" modal with member search + optional subscription link); printable/PDF-friendly receipt
+at a top-level `/receipt/:id` route (dashboard chrome hidden via `print:` utilities, gym name
+from settings). New i18n keys; RTL-aware.
+
+**Tested:**
+- `npm run build` passes (tsc strict + vite, 125 modules).
+- Live RPCs as a **real reception user** via PostgREST: check-in on an active member logs a row
+  at the correct branch; check-in on an expired member is blocked with `checkin_expired`;
+  `record_payment` returns the row; the payments↔member and check-ins↔member embed queries the
+  UI uses return the expected shape. Also validated as superuser: frozen → `checkin_frozen`,
+  freeze/session guards. All test rows cleaned; seed intact (50 members / 302 check-ins /
+  56 payments).
+
+**Env limitation (unchanged):** authenticated screens verified via their data layer (curl),
+not a rendered browser session, because the sandbox browser can't tunnel to Supabase.
 
 ### Phase 1 — Supabase schema + RLS + seed (2026-07-11) ✅
 **Delivered:** `supabase/migrations/0001_schema.sql` (12 tables, 6 enums, member-code
