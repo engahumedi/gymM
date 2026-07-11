@@ -19,6 +19,10 @@ export function errorMessageKey(message: string | null | undefined): MessageKey 
   if (m.includes('checkin_frozen')) return 'err.checkin_frozen';
   if (m.includes('checkin_expired')) return 'err.checkin_expired';
   if (m.includes('checkin_no_sessions')) return 'err.checkin_no_sessions';
+  if (m.includes('already_member')) return 'err.already_member';
+  if (m.includes('already registered') || m.includes('user already') || m.includes('email_exists'))
+    return 'err.email_taken';
+  if (m.includes('weak') && m.includes('password')) return 'err.weak_password';
   if (m.includes('row-level security') || m.includes('violates row-level')) return 'err.forbidden';
   return 'err.generic';
 }
