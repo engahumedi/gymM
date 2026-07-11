@@ -7,6 +7,12 @@ import { LoginPage } from '@/pages/LoginPage';
 import { HomePage } from '@/pages/public/HomePage';
 import { NotFound } from '@/pages/NotFound';
 import { Placeholder } from '@/pages/Placeholder';
+import { DashboardHome } from '@/pages/dashboard/DashboardHome';
+import { MembersList } from '@/pages/dashboard/members/MembersList';
+import { MemberForm } from '@/pages/dashboard/members/MemberForm';
+import { MemberProfile } from '@/pages/dashboard/members/MemberProfile';
+import { PlansList } from '@/pages/dashboard/plans/PlansList';
+import { RequireRole as Guard } from '@/auth/RequireRole';
 
 // Hash routing: zero server config on GitHub Pages, never 404s on refresh.
 export const router = createHashRouter([
@@ -32,11 +38,21 @@ export const router = createHashRouter([
       </RequireRole>
     ),
     children: [
-      { index: true, element: <Placeholder titleKey="dashboard.title" /> },
-      { path: 'members', element: <Placeholder titleKey="dashboard.members" /> },
+      { index: true, element: <DashboardHome /> },
+      { path: 'members', element: <MembersList /> },
+      { path: 'members/new', element: <MemberForm /> },
+      { path: 'members/:id', element: <MemberProfile /> },
+      { path: 'members/:id/edit', element: <MemberForm /> },
       { path: 'checkin', element: <Placeholder titleKey="dashboard.checkin" /> },
       { path: 'payments', element: <Placeholder titleKey="dashboard.payments" /> },
-      { path: 'plans', element: <Placeholder titleKey="dashboard.plans" /> },
+      {
+        path: 'plans',
+        element: (
+          <Guard allow={['super_admin']}>
+            <PlansList />
+          </Guard>
+        ),
+      },
       { path: 'analytics', element: <Placeholder titleKey="dashboard.analytics" /> },
       { path: 'settings', element: <Placeholder titleKey="dashboard.settings" /> },
     ],
