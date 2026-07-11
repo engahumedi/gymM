@@ -1,29 +1,33 @@
-import { Link, NavLink, Outlet } from 'react-router-dom';
+import { NavLink, Outlet } from 'react-router-dom';
 import { useI18n } from '@/i18n/I18nProvider';
 import { useAuth } from '@/auth/AuthProvider';
 import { LangToggle } from '@/components/LangToggle';
 import { ReferenceDataProvider } from '@/lib/ReferenceData';
+import {
+  Users, CalendarClock, CreditCard, Layers, BarChart3, Settings, LayoutHome,
+  LogOut, ICON,
+} from '@/components/ui/dashicons';
 import type { MessageKey } from '@/i18n/dictionary';
 import type { UserRole } from '@/lib/database.types';
+import type { LucideIcon } from 'lucide-react';
 
 interface NavItem {
   to: string;
   key: MessageKey;
   roles: UserRole[];
+  Icon: LucideIcon;
 }
 
-// Reception sees the operational screens; super admin also sees analytics/settings.
 const navItems: NavItem[] = [
-  { to: '/dashboard', key: 'dashboard.title', roles: ['super_admin', 'reception'] },
-  { to: '/dashboard/members', key: 'dashboard.members', roles: ['super_admin', 'reception'] },
-  { to: '/dashboard/checkin', key: 'dashboard.checkin', roles: ['super_admin', 'reception'] },
-  { to: '/dashboard/payments', key: 'dashboard.payments', roles: ['super_admin', 'reception'] },
-  { to: '/dashboard/plans', key: 'dashboard.plans', roles: ['super_admin'] },
-  { to: '/dashboard/analytics', key: 'dashboard.analytics', roles: ['super_admin'] },
-  { to: '/dashboard/settings', key: 'dashboard.settings', roles: ['super_admin'] },
+  { to: '/dashboard', key: 'dashboard.title', roles: ['super_admin', 'reception'], Icon: LayoutHome },
+  { to: '/dashboard/members', key: 'dashboard.members', roles: ['super_admin', 'reception'], Icon: Users },
+  { to: '/dashboard/checkin', key: 'dashboard.checkin', roles: ['super_admin', 'reception'], Icon: CalendarClock },
+  { to: '/dashboard/payments', key: 'dashboard.payments', roles: ['super_admin', 'reception'], Icon: CreditCard },
+  { to: '/dashboard/plans', key: 'dashboard.plans', roles: ['super_admin'], Icon: Layers },
+  { to: '/dashboard/analytics', key: 'dashboard.analytics', roles: ['super_admin'], Icon: BarChart3 },
+  { to: '/dashboard/settings', key: 'dashboard.settings', roles: ['super_admin'], Icon: Settings },
 ];
 
-// Clean light admin dashboard.
 export function DashboardLayout() {
   const { t } = useI18n();
   const { profile, signOut } = useAuth();
@@ -31,66 +35,71 @@ export function DashboardLayout() {
   const items = navItems.filter((i) => (role ? i.roles.includes(role) : false));
 
   return (
-    <div className="flex min-h-screen bg-slate-50 text-ink">
-      <aside className="hidden w-60 shrink-0 flex-col border-e border-slate-200 bg-white md:flex">
-        <div className="border-b border-slate-200 p-4">
-          <span className="text-lg font-extrabold text-brand">{t('app.name')}</span>
-          <p className="mt-1 text-xs text-slate-500">
-            {role ? t(`role.${role}` as MessageKey) : ''}
-          </p>
+    <div className="flex min-h-screen bg-bg text-text">
+      <aside className="hidden w-60 shrink-0 flex-col border-e border-border md:flex">
+        <div className="px-5 py-6">
+          <span className="font-display text-xl">{t('app.name')}</span>
+          <p className="eyebrow mt-1">{role ? t(`role.${role}` as MessageKey) : ''}</p>
         </div>
-        <nav className="flex flex-1 flex-col gap-1 p-3">
-          {items.map((item) => (
+        <nav className="flex flex-1 flex-col gap-0.5 px-3">
+          {items.map(({ to, key, Icon }) => (
             <NavLink
-              key={item.to}
-              to={item.to}
-              end={item.to === '/dashboard'}
+              key={to}
+              to={to}
+              end={to === '/dashboard'}
               className={({ isActive }) =>
-                `rounded-md px-3 py-2 text-sm font-medium transition ${
+                `flex items-center gap-3 border-s-2 px-3 py-2 text-sm transition-colors ${
                   isActive
-                    ? 'bg-brand/10 text-brand'
-                    : 'text-slate-600 hover:bg-slate-100'
+                    ? 'border-accent bg-surface text-text'
+                    : 'border-transparent text-muted hover:text-text'
                 }`
               }
             >
-              {t(item.key)}
+              <Icon {...ICON} />
+              {t(key)}
             </NavLink>
           ))}
         </nav>
+        <button
+          onClick={signOut}
+          className="m-3 flex items-center gap-3 px-3 py-2 text-sm text-muted transition-colors hover:text-text"
+        >
+          <LogOut {...ICON} />
+          {t('nav.logout')}
+        </button>
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3">
-          <span className="font-semibold md:hidden">{t('app.name')}</span>
-          <div className="flex items-center gap-3 ms-auto">
-            <span className="hidden text-sm text-slate-500 sm:inline">
-              {profile?.full_name}
-            </span>
+        {/* Mobile top bar + nav */}
+        <header className="flex items-center justify-between border-b border-border px-4 py-3">
+          <span className="font-display text-lg md:hidden">{t('app.name')}</span>
+          <div className="flex items-center gap-4 ms-auto">
+            <span className="hidden text-sm text-muted sm:inline">{profile?.full_name}</span>
             <LangToggle />
-            <button
-              type="button"
-              onClick={signOut}
-              className="rounded-md border border-slate-200 px-3 py-1 text-sm hover:bg-slate-100"
-            >
-              {t('nav.logout')}
+            <button onClick={signOut} className="text-muted transition-colors hover:text-text md:hidden" aria-label="logout">
+              <LogOut {...ICON} />
             </button>
           </div>
         </header>
-
-        {/* Mobile nav */}
-        <nav className="flex gap-1 overflow-x-auto border-b border-slate-200 bg-white px-2 py-2 md:hidden">
-          {items.map((item) => (
-            <Link
-              key={item.to}
-              to={item.to}
-              className="whitespace-nowrap rounded-md px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100"
+        <nav className="flex gap-1 overflow-x-auto border-b border-border px-2 py-2 md:hidden">
+          {items.map(({ to, key, Icon }) => (
+            <NavLink
+              key={to}
+              to={to}
+              end={to === '/dashboard'}
+              className={({ isActive }) =>
+                `flex items-center gap-1.5 whitespace-nowrap rounded px-3 py-1.5 text-sm ${
+                  isActive ? 'bg-surface text-text' : 'text-muted'
+                }`
+              }
             >
-              {t(item.key)}
-            </Link>
+              <Icon size={15} strokeWidth={1.5} />
+              {t(key)}
+            </NavLink>
           ))}
         </nav>
 
-        <main className="flex-1 p-4 md:p-6">
+        <main className="mx-auto w-full max-w-5xl flex-1 px-5 py-8">
           <ReferenceDataProvider>
             <Outlet />
           </ReferenceDataProvider>

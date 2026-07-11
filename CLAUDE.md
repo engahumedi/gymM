@@ -31,12 +31,14 @@ English (LTR) toggle.
   correctly in RTL (layout, tables, charts, icons).
 
 ## Current status (2026-07-11)
-Phases **1–7 done** and verified on the live Supabase project (`hfjyaduiynigylvunnto`).
-**Next: Phase 8** (polish + UI redesign + verify live Pages). Owner said the current UI is
-rough — Phase 8 is where it gets redesigned. Develop on branch
-`claude/gym-system-bootstrap-mnn1vh` (in sync with `main`). See the **Handoff** section at the
-top of `PROGRESS.md` for what to request from the user (Supabase URL + anon key for `.env`; a
-`sbp_` PAT to apply migrations over HTTPS) and the sandbox networking notes.
+**All 8 phases done** and verified on the live Supabase project (`hfjyaduiynigylvunnto`);
+deployed to GitHub Pages. UI is redesigned to an **editorial-athletic** system (dark charcoal
+ground, one crimson accent, self-hosted Reem Kufi / Fraunces / IBM Plex Sans Arabic, thin
+lucide icons, hairline-and-whitespace layout — no cards/glow/emoji). Design tokens live in
+`src/index.css` + `tailwind.config.js`. Develop on branch `claude/gym-system-bootstrap-mnn1vh`
+(in sync with `main`). See the **Handoff** section at the top of `PROGRESS.md` for what to
+request from the user (Supabase URL + anon key for `.env`; a `sbp_` PAT to apply migrations
+over HTTPS) and the sandbox networking notes.
 
 ## Pointer
 Full requirements live in **SPEC.md** — read the relevant section before starting any phase.

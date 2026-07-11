@@ -20,13 +20,14 @@ export interface StatusInfo {
   className: string;
 }
 
+// Dot-colour token per state; the badge itself stays quiet (hairline + ink).
 const STATUS_STYLES: Record<DisplayStatus, { labelKey: MessageKey; className: string }> = {
-  active: { labelKey: 'status.active', className: 'bg-green-100 text-green-700' },
-  expiring: { labelKey: 'status.expiring', className: 'bg-amber-100 text-amber-700' },
-  expired: { labelKey: 'status.expired', className: 'bg-red-100 text-red-700' },
-  frozen: { labelKey: 'status.frozen', className: 'bg-blue-100 text-blue-700' },
-  pending: { labelKey: 'status.pending', className: 'bg-slate-200 text-slate-700' },
-  none: { labelKey: 'status.none', className: 'bg-slate-100 text-slate-500' },
+  active: { labelKey: 'status.active', className: 'text-good' },
+  expiring: { labelKey: 'status.expiring', className: 'text-warn' },
+  expired: { labelKey: 'status.expired', className: 'text-accent' },
+  frozen: { labelKey: 'status.frozen', className: 'text-sand' },
+  pending: { labelKey: 'status.pending', className: 'text-muted' },
+  none: { labelKey: 'status.none', className: 'text-faint' },
 };
 
 export function subscriptionDisplayStatus(sub: Subscription | null | undefined): DisplayStatus {

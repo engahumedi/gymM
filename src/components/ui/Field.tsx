@@ -1,7 +1,10 @@
 import type { InputHTMLAttributes, SelectHTMLAttributes, TextareaHTMLAttributes, ReactNode } from 'react';
 
+// Inputs sit on the ground with a hairline underlineable border — not white
+// rounded boxes. Focus is a quiet accent border, no ring glow.
 const base =
-  'w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-brand focus:ring-1 focus:ring-brand disabled:bg-slate-100';
+  'w-full rounded bg-surface border border-border px-3 py-2 text-sm text-text outline-none transition-colors ' +
+  'focus:border-accent placeholder:text-faint disabled:opacity-60';
 
 export function Field({
   label,
@@ -16,12 +19,12 @@ export function Field({
 }) {
   return (
     <label className="block">
-      <span className="mb-1 block text-sm font-medium text-slate-700">
+      <span className="mb-1.5 block text-xs font-medium tracking-wide text-muted">
         {label}
-        {required && <span className="text-brand"> *</span>}
+        {required && <span className="text-accent"> *</span>}
       </span>
       {children}
-      {error && <span className="mt-1 block text-xs text-red-600">{error}</span>}
+      {error && <span className="mt-1 block text-xs text-accent">{error}</span>}
     </label>
   );
 }

@@ -27,9 +27,9 @@ export function PaymentsList() {
       ) : (data ?? []).length === 0 ? (
         <EmptyState messageKey="payments.empty" />
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
+        <div className="overflow-x-auto">
           <table className="w-full text-start text-sm">
-            <thead className="border-b border-slate-200 bg-slate-50 text-slate-500">
+            <thead className="border-b border-border text-muted">
               <tr>
                 <th className="px-3 py-2 text-start font-medium">{t('payments.col.date')}</th>
                 <th className="px-3 py-2 text-start font-medium">{t('payments.col.member')}</th>
@@ -41,15 +41,15 @@ export function PaymentsList() {
             </thead>
             <tbody>
               {(data ?? []).map((p) => (
-                <tr key={p.id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50">
-                  <td className="px-3 py-2 text-slate-600">{formatDateTime(p.created_at, locale)}</td>
-                  <td className="px-3 py-2 font-medium text-ink">{p.members?.full_name ?? '—'}</td>
+                <tr key={p.id} className="border-b border-border hover:bg-surface">
+                  <td className="px-3 py-2 text-muted">{formatDateTime(p.created_at, locale)}</td>
+                  <td className="px-3 py-2 font-medium text-text">{p.members?.full_name ?? '—'}</td>
                   <td className="px-3 py-2">{formatCurrency(p.amount, locale)}</td>
                   <td className="px-3 py-2">{t(methodLabelKey(p.method))}</td>
-                  <td className="px-3 py-2 font-mono text-xs text-slate-500">{p.receipt_number ?? '—'}</td>
+                  <td className="px-3 py-2 font-mono text-xs text-muted">{p.receipt_number ?? '—'}</td>
                   <td className="px-3 py-2 text-end">
                     <button
-                      className="text-sm font-semibold text-brand hover:underline"
+                      className="text-sm font-semibold text-accent hover:underline"
                       onClick={() => navigate(`/receipt/${p.id}`)}
                     >
                       {t('payments.print')}

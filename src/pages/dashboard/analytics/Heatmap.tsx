@@ -21,14 +21,14 @@ export function Heatmap({ grid }: { grid: number[][] }) {
           <tr>
             <th></th>
             {HOURS.map((h) => (
-              <th key={h} className="text-[10px] font-normal text-slate-400">{h}</th>
+              <th key={h} className="text-[10px] font-normal text-faint">{h}</th>
             ))}
           </tr>
         </thead>
         <tbody>
           {dayKeys.map((dk, d) => (
             <tr key={dk}>
-              <td className="pe-1 text-[10px] text-slate-500">
+              <td className="pe-1 text-[10px] text-muted">
                 {locale === 'ar' ? dayLabels[dk].ar : dayLabels[dk].en}
               </td>
               {HOURS.map((h) => {
@@ -40,7 +40,7 @@ export function Heatmap({ grid }: { grid: number[][] }) {
                       title={`${v} ${t('checkin.title')}`}
                       className="h-5 w-5 rounded-sm"
                       style={{
-                        backgroundColor: v === 0 ? '#f1f5f9' : `rgba(225,29,42,${0.15 + intensity * 0.85})`,
+                        backgroundColor: v === 0 ? 'var(--surface-2)' : `rgba(200,52,47,${0.15 + intensity * 0.85})`,
                       }}
                     />
                   </td>

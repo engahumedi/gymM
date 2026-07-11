@@ -122,7 +122,7 @@ export function SubscriptionActionModal({ action, member, subscription, onClose,
         )}
 
         {action === 'new' && (
-          <label className="flex items-center gap-2 text-sm text-slate-700">
+          <label className="flex items-center gap-2 text-sm text-text">
             <input type="checkbox" checked={activateNow} onChange={(e) => setActivateNow(e.target.checked)} />
             {t('sub.field.activate_now')}
           </label>
@@ -137,7 +137,7 @@ export function SubscriptionActionModal({ action, member, subscription, onClose,
               onChange={(e) => setDays(e.target.value)}
             />
             {currentPlan && (
-              <span className="mt-1 block text-xs text-slate-400">
+              <span className="mt-1 block text-xs text-faint">
                 {t('plans.col.freeze')}: {currentPlan.freeze_allowance_days} ·{' '}
                 {t('profile.frozen_days')}: {subscription?.frozen_days_used ?? 0}
               </span>
@@ -146,7 +146,7 @@ export function SubscriptionActionModal({ action, member, subscription, onClose,
         )}
 
         {action === 'upgrade' && quote !== null && (
-          <div className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">
+          <div className="border-s-2 border-sand bg-surface-2 px-3 py-2 text-sm text-text">
             {t('sub.quote.due')}: <strong>{formatCurrency(quote, locale)}</strong>
           </div>
         )}
