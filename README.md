@@ -79,9 +79,11 @@ instead of a blank page.
 
 Automated via `.github/workflows/deploy.yml` on every push to `main`.
 
-1. In the repo: **Settings → Secrets and variables → Actions**, add
-   `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` (both client-safe).
-2. **Settings → Pages → Build and deployment → Source: GitHub Actions**.
+1. **Settings → Pages → Build and deployment → Source: GitHub Actions** (required —
+   otherwise Pages serves raw source and you get a blank page).
+2. The Supabase URL + anon key live in the committed **`.env.production`** (client-safe;
+   RLS protects the data), so no Actions secret is needed. To rebrand for another project,
+   edit that file.
 3. Push to `main`. The workflow builds with `base: /gymM/` and deploys.
 4. Live URL: `https://<your-username>.github.io/gymM/`
    (if you fork/rename the repo, set the `VITE_BASE` env or edit `vite.config.ts`).

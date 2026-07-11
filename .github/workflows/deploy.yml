@@ -29,10 +29,8 @@ jobs:
       - run: npm ci
 
       - name: Build
-        env:
-          # Client-safe values injected at build time (RLS protects the data).
-          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
-          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+        # Client-safe Supabase URL + anon key come from the committed
+        # .env.production (RLS protects the data), so no Actions secret is needed.
         run: npm run build
 
       - uses: actions/upload-pages-artifact@v3
