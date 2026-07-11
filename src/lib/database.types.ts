@@ -148,6 +148,31 @@ export interface Notification {
   read_at: string | null;
 }
 
+export interface Trainer {
+  id: string;
+  gym_id: string;
+  branch_id: string | null;
+  name_ar: string;
+  name_en: string;
+  specialty_ar: string | null;
+  specialty_en: string | null;
+  bio_ar: string | null;
+  bio_en: string | null;
+  photo_url: string | null;
+  socials: Record<string, string>;
+  sort_order: number;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface SiteContent {
+  id: string;
+  gym_id: string;
+  key: string;
+  content: Record<string, unknown>;
+  updated_at: string;
+}
+
 type Row<T> = { Row: T; Insert: Partial<T>; Update: Partial<T>; Relationships: [] };
 
 export interface Database {
@@ -163,6 +188,8 @@ export interface Database {
       check_ins: Row<CheckIn>;
       freezes: Row<Freeze>;
       notifications: Row<Notification>;
+      trainers: Row<Trainer>;
+      site_content: Row<SiteContent>;
     };
     Views: Record<string, never>;
     Functions: {

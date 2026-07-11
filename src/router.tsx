@@ -5,6 +5,8 @@ import { PortalLayout } from '@/layouts/PortalLayout';
 import { RequireRole } from '@/auth/RequireRole';
 import { LoginPage } from '@/pages/LoginPage';
 import { HomePage } from '@/pages/public/HomePage';
+import { PlansPage, BranchesPage, TrainersPage, ContactPage } from '@/pages/public/PublicPages';
+import { JoinPage } from '@/pages/public/JoinPage';
 import { NotFound } from '@/pages/NotFound';
 import { Placeholder } from '@/pages/Placeholder';
 import { DashboardHome } from '@/pages/dashboard/DashboardHome';
@@ -32,11 +34,11 @@ export const router = createHashRouter([
     element: <PublicLayout />,
     children: [
       { path: '/', element: <HomePage /> },
-      { path: '/plans', element: <Placeholder titleKey="nav.plans" /> },
-      { path: '/branches', element: <Placeholder titleKey="nav.branches" /> },
-      { path: '/trainers', element: <Placeholder titleKey="nav.trainers" /> },
-      { path: '/contact', element: <Placeholder titleKey="nav.contact" /> },
-      { path: '/join', element: <Placeholder titleKey="nav.join" /> },
+      { path: '/plans', element: <PlansPage /> },
+      { path: '/branches', element: <BranchesPage /> },
+      { path: '/trainers', element: <TrainersPage /> },
+      { path: '/contact', element: <ContactPage /> },
+      { path: '/join', element: <JoinPage /> },
     ],
   },
 

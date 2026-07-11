@@ -9,10 +9,10 @@ failure-case testing, and is committed.
 - [x] **Phase 4** — Check-in + manual payments
 - [x] **Phase 5** — Notifications engine
 - [x] **Phase 6** — Analytics dashboard
-- [ ] **Phase 7** — Public website + Join Now flow
+- [x] **Phase 7** — Public website + Join Now flow
 - [ ] **Phase 8** — Polish: RTL audit, empty states, loading skeletons, error handling → verify Pages deploy
 
-**Current phase: 7** — Phases 1–6 complete and verified against the live Supabase project.
+**Current phase: 8** — Phases 1–7 complete and verified against the live Supabase project.
 UI polish is intentionally deferred to Phase 8 (per the project owner) — functional first.
 
 ## Handoff — read this first in a new session
@@ -20,8 +20,12 @@ UI polish is intentionally deferred to Phase 8 (per the project owner) — funct
 - **Repo layout:** `main` contains Phases 1–3 (merged via PR #1, #2). Continue development on
   branch **`claude/gym-system-bootstrap-mnn1vh`** (it is in sync with `main`). Docs live at the
   repo root: `SPEC.md`, `CLAUDE.md`, `PROGRESS.md`, `DECISIONS.md`, `README.md`.
-- **Next up: Phase 7** — public marketing website + "Join Now" flow (visitor picks plan+branch
-  → account → pending subscription → reception activates). All content data-driven from the DB.
+- **Next up: Phase 8** — polish: RTL audit, empty states, loading skeletons, error handling,
+  bundle/code-split cleanup, and verify the live GitHub Pages deployment end-to-end. This is
+  also where the deferred **UI redesign** happens (owner said current UI is rough).
+- **Auth config note:** the public Join flow needs email **autoconfirm ON** (enabled on this
+  project via the Management API). For a fresh project, turn off "Confirm email" in Auth
+  settings so sign-ups get an immediate session.
 - **UI note:** the project owner said the current UI is rough and will be polished later
   (Phase 8). Keep building functionality first; don't over-invest in styling before then.
 - **Live Supabase project:** URL `https://hfjyaduiynigylvunnto.supabase.co` (ref
@@ -45,6 +49,34 @@ UI polish is intentionally deferred to Phase 8 (per the project owner) — funct
 
 ## Session notes
 <!-- Append a short report after each phase: what was tested, what passed, what was fixed. -->
+
+### Phase 7 — Public website + Join Now (2026-07-11) ✅
+**DB (`0007_public_join.sql`, applied live):** `public_join(full_name, phone, gender, plan, branch)`
+— SECURITY DEFINER, scoped to `auth.uid()`: creates the member (links `user_id`), sets
+`profiles.member_id`, and inserts a `pending` subscription; guards `already_member` and validates
+plan/branch. Enabled **email autoconfirm** on the project (Management API) so a sign-up has a
+session immediately.
+
+**UI (data-driven from the DB):** full marketing home (hero, plans, branches w/ map links,
+trainers, facilities, testimonials, FAQ, contact) + dedicated Plans (with comparison table),
+Branches, Trainers, Contact pages, all fed by a `PublicDataProvider` (gym/plans/branches/
+trainers/site_content, anon-readable). **Join Now** page: pick plan+branch (plan can be
+pre-selected via `?plan=`), enter details, `signUpAndJoin()` creates the account + member +
+pending subscription, then routes to the member portal. Pending sign-ups surface in the
+reception dashboard's "pending activations" panel and are activated from the member profile.
+
+**Tested:**
+- `npm run build` passes.
+- **Join flow end-to-end over HTTP:** visitor signs up (immediate session) → `public_join`
+  creates member (`member_code`, `user_id` linked) + `pending` sub; visitor sees own pending
+  sub (RLS); reception at the chosen branch sees it in their queue; a second join → `already_member`.
+  Test account + member cleaned up (seed back to 50).
+- **Anon reads** confirmed for all public content (gym/4 plans/2 branches/4 trainers/4 content
+  blocks) while `members` stays private (0 rows to anon).
+
+**Env limitation:** the marketing pages fetch from Supabase, which the sandbox browser can't
+reach, so they were verified via anon data reads + build rather than a rendered session — they
+populate on the live Pages site.
 
 ### Phase 6 — Analytics dashboard (2026-07-11) ✅
 **UI (super-admin only):** date-range (3/6/12 mo) + branch filters; six KPI cards (active

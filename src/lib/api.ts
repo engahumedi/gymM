@@ -274,8 +274,53 @@ export async function fetchTodayCheckIns(): Promise<CheckInWithMember[]> {
   ) as unknown as CheckInWithMember[];
 }
 
+// ---- Public site content (Phase 7) ---------------------------------------
+import type { Notification, Trainer, SiteContent, Gender } from './database.types';
+
+export async function fetchTrainers(): Promise<Trainer[]> {
+  return unwrap(
+    await supabase.from('trainers').select('*').eq('is_active', true).order('sort_order'),
+  );
+}
+
+// Returns site_content as a { key -> content } map for easy lookup.
+export async function fetchSiteContent(): Promise<Record<string, Record<string, unknown>>> {
+  const rows = unwrap(await supabase.from('site_content').select('key, content')) as
+    | Pick<SiteContent, 'key' | 'content'>[]
+    | null;
+  const out: Record<string, Record<string, unknown>> = {};
+  for (const r of rows ?? []) out[r.key] = r.content;
+  return out;
+}
+
+// Public "Join Now": create the auth account, then the member + pending
+// subscription via the public_join RPC. Returns the new member id.
+export async function signUpAndJoin(params: {
+  email: string;
+  password: string;
+  fullName: string;
+  phone: string;
+  gender: Gender | null;
+  planId: string;
+  branchId: string;
+}): Promise<string> {
+  const { error: signErr } = await supabase.auth.signUp({
+    email: params.email,
+    password: params.password,
+    options: { data: { full_name: params.fullName } },
+  });
+  if (signErr) throw new Error(signErr.message);
+  // autoconfirm is on, so a session is active now — call the join RPC.
+  return rpcCall<string>('public_join', {
+    p_full_name: params.fullName,
+    p_phone: params.phone,
+    p_gender: params.gender,
+    p_plan_id: params.planId,
+    p_branch_id: params.branchId,
+  });
+}
+
 // ---- Notifications (Phase 5) ---------------------------------------------
-import type { Notification } from './database.types';
 
 export async function fetchMyNotifications(): Promise<Notification[]> {
   return unwrap(
