@@ -31,20 +31,24 @@ Or paste each file into the Supabase SQL editor in order (0001 → 0002 → 0003
 
 ### Demo accounts
 
-The seed loads domain data only; **auth accounts are created via Supabase Auth**. After
-seeding, create users in the dashboard and set their role/branch in `profiles`:
+These accounts are provisioned on the live project (all share the password
+`GymDemo#2026` — change them for production):
+
+| Email | Role | Scope |
+|-------|------|-------|
+| `admin@powergym.sa` | Super Admin | all branches |
+| `reception.olaya@powergym.sa` | Reception | Olaya branch |
+| `reception.malqa@powergym.sa` | Reception | Malqa branch |
+| `member@powergym.sa` | Member | own portal (linked to a real member) |
+
+To create more: add a user in the dashboard (or via the public Join Now flow — the
+`on_auth_user_created` trigger makes their `profiles` row as `member`), then promote if
+needed:
 
 ```sql
--- super admin
-update profiles set role='super_admin', gym_id='11111111-1111-1111-1111-111111111111'
-where id='<auth-user-uuid>';
--- branch reception
 update profiles set role='reception', branch_id='22222222-2222-2222-2222-222222220001'
 where id='<auth-user-uuid>';
 ```
-
-Members can self-register (public Join Now flow) — the `on_auth_user_created` trigger
-creates their `profiles` row as `member` automatically.
 
 ## Environment
 

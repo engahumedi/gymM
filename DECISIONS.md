@@ -72,3 +72,23 @@
 
 - **Tailwind for styling**, IBM Plex Sans Arabic as the primary font (loaded via CSS; will
   self-host or use a bundled font in the polish phase to avoid external CDN at runtime).
+
+## Provisioning the live Supabase project
+
+- **Applied the DB over HTTPS via the Management API** (`POST /v1/projects/{ref}/database/
+  query`) using a short-lived account PAT. Reason: the build sandbox only allows outbound
+  HTTPS through a proxy — raw Postgres (5432/6543) is unreachable, and project API keys
+  (anon/`service_role`) cannot run DDL. The PAT is used transiently and never written to any
+  tracked file; secrets live only in an untracked scratchpad env file. The repo owner should
+  revoke the PAT after setup.
+
+- **Demo accounts are created via the Auth Admin API** (service key), then roles/branch are
+  set with a SQL `update` on `profiles` (the `on_auth_user_created` trigger seeds every new
+  user as `member`, so admin/reception are promoted explicitly). The member account is linked
+  to a real seeded member row (`members.user_id` + `profiles.member_id`) so the portal shows
+  real subscription/payment/check-in history. Password documented in README — fine for a demo
+  gym; rotate for production.
+
+- **`.env` is created locally (gitignored)** with the project URL + anon key so `npm run dev/
+  build` target the live project. For GitHub Pages, the same two values must be added as
+  Actions secrets (documented in README) — they are client-safe (RLS enforces access).
