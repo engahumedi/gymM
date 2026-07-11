@@ -263,6 +263,48 @@ export async function fetchTodayCheckIns(): Promise<CheckInWithMember[]> {
   ) as unknown as CheckInWithMember[];
 }
 
+// ---- Notifications (Phase 5) ---------------------------------------------
+import type { Notification } from './database.types';
+
+export async function fetchMyNotifications(): Promise<Notification[]> {
+  return unwrap(
+    await supabase
+      .from('notifications')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(50),
+  );
+}
+
+export async function markNotificationRead(id: string): Promise<void> {
+  const { error } = await supabase
+    .from('notifications')
+    .update({ status: 'read', read_at: new Date().toISOString() } as never)
+    .eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
+// Recent notifications outbox for staff (simulated messages), RLS-scoped.
+export async function fetchNotificationsLog(): Promise<Notification[]> {
+  return unwrap(
+    await supabase
+      .from('notifications')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(100),
+  );
+}
+
+// Member self-service: request a renewal → creates a PENDING subscription that
+// reception activates after payment (RLS allows a member to insert only pending).
+export async function requestRenewal(
+  memberId: string,
+  planId: string,
+  branchId: string,
+): Promise<Subscription> {
+  return createSubscription(memberId, planId, branchId, false);
+}
+
 // ---- Member photo (private bucket) ---------------------------------------
 export async function uploadMemberPhoto(memberId: string, file: File): Promise<string> {
   const ext = file.name.split('.').pop() || 'jpg';

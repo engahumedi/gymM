@@ -2,6 +2,7 @@ import { NavLink, Outlet } from 'react-router-dom';
 import { useI18n } from '@/i18n/I18nProvider';
 import { useAuth } from '@/auth/AuthProvider';
 import { LangToggle } from '@/components/LangToggle';
+import { ReferenceDataProvider } from '@/lib/ReferenceData';
 import type { MessageKey } from '@/i18n/dictionary';
 
 const navItems: { to: string; key: MessageKey }[] = [
@@ -56,7 +57,9 @@ export function PortalLayout() {
       </header>
 
       <main className="mx-auto w-full max-w-3xl flex-1 p-4">
-        <Outlet />
+        <ReferenceDataProvider>
+          <Outlet />
+        </ReferenceDataProvider>
       </main>
     </div>
   );

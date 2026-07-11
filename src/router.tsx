@@ -15,6 +15,8 @@ import { PlansList } from '@/pages/dashboard/plans/PlansList';
 import { CheckInScreen } from '@/pages/dashboard/CheckInScreen';
 import { PaymentsList } from '@/pages/dashboard/payments/PaymentsList';
 import { ReceiptView } from '@/pages/ReceiptView';
+import { PortalHome } from '@/pages/portal/PortalHome';
+import { PortalPayments, PortalCheckins } from '@/pages/portal/PortalHistory';
 import { RequireRole as Guard } from '@/auth/RequireRole';
 
 // Hash routing: zero server config on GitHub Pages, never 404s on refresh.
@@ -78,9 +80,9 @@ export const router = createHashRouter([
       </RequireRole>
     ),
     children: [
-      { index: true, element: <Placeholder titleKey="portal.subscription" /> },
-      { path: 'payments', element: <Placeholder titleKey="portal.payments" /> },
-      { path: 'checkins', element: <Placeholder titleKey="portal.checkins" /> },
+      { index: true, element: <PortalHome /> },
+      { path: 'payments', element: <PortalPayments /> },
+      { path: 'checkins', element: <PortalCheckins /> },
     ],
   },
 

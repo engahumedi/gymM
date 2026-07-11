@@ -131,6 +131,23 @@ export interface Freeze {
   created_at: string;
 }
 
+export type NotificationChannel = 'in_app' | 'whatsapp' | 'sms';
+export type NotificationStatus = 'simulated' | 'queued' | 'sent' | 'failed' | 'read';
+
+export interface Notification {
+  id: string;
+  gym_id: string;
+  member_id: string | null;
+  subscription_id: string | null;
+  channel: NotificationChannel;
+  type: string;
+  message_ar: string | null;
+  message_en: string | null;
+  status: NotificationStatus;
+  created_at: string;
+  read_at: string | null;
+}
+
 type Row<T> = { Row: T; Insert: Partial<T>; Update: Partial<T>; Relationships: [] };
 
 export interface Database {
@@ -145,6 +162,7 @@ export interface Database {
       payments: Row<Payment>;
       check_ins: Row<CheckIn>;
       freezes: Row<Freeze>;
+      notifications: Row<Notification>;
     };
     Views: Record<string, never>;
     Functions: {
