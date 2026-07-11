@@ -1,20 +1,72 @@
+@import './fonts/fonts.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/* =============================================================================
+   Editorial-athletic design tokens. Deep charcoal ground, warm off-white ink,
+   one restrained crimson accent + a rare warm sand. Neutrals do the work.
+   ============================================================================= */
 :root {
-  color-scheme: light;
+  --bg: #0d0f12;
+  --surface: #16191d;
+  --surface-2: #1c2026;
+  --border: #262a31;
+  --border-strong: #363b44;
+  --text: #ece7df;
+  --muted: #8b8b82;
+  --faint: #5c5f66;
+  --accent: #c8342f;      /* crimson — smallest touches only */
+  --accent-ink: #f6ede9;
+  --sand: #cbb994;        /* second accent — very rare */
+  --good: #6f9f6a;
+  --warn: #c9a24b;
+
+  --r: 4px;               /* single radius vocabulary, max 8px */
+  --r-lg: 8px;
+  color-scheme: dark;
 }
 
-html,
-body,
-#root {
-  height: 100%;
-}
+html, body, #root { height: 100%; }
 
 body {
   margin: 0;
-  @apply bg-slate-50 text-ink font-sans antialiased;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'IBM Plex Sans Arabic', system-ui, sans-serif;
+  font-weight: 400;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
-/* Logical properties so spacing mirrors automatically in RTL/LTR. */
+/* Display face switches by script: Reem Kufi for Arabic, Fraunces for English. */
+.font-display { font-family: 'Reem Kufi', system-ui, sans-serif; font-weight: 700; letter-spacing: -0.01em; }
+html[lang="en"] .font-display { font-family: 'Fraunces', Georgia, serif; font-weight: 600; letter-spacing: -0.015em; }
+
+/* Numeric/label micro-type: Fraunces small caps feel via tracking. */
+.eyebrow {
+  font-family: 'IBM Plex Sans Arabic', sans-serif;
+  font-size: 0.72rem; letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--muted); font-weight: 600;
+}
+html[lang="ar"] .eyebrow { letter-spacing: 0.08em; text-transform: none; }
+
+::selection { background: var(--accent); color: #fff; }
+
+/* Quiet, thin scrollbars that match the ground. */
+* { scrollbar-width: thin; scrollbar-color: var(--border-strong) transparent; }
+*::-webkit-scrollbar { width: 8px; height: 8px; }
+*::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 8px; }
+
+/* Inputs inherit the ground, not white boxes. */
+input, select, textarea { color: var(--text); }
+input::placeholder, textarea::placeholder { color: var(--faint); }
+select option { background: var(--surface); color: var(--text); }
+
+/* A single hairline utility used to separate instead of boxing everything. */
+.hairline { border-color: var(--border); }
+
+@layer utilities {
+  .text-balance { text-wrap: balance; }
+}

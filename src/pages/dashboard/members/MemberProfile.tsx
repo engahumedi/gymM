@@ -3,13 +3,8 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useI18n } from '@/i18n/I18nProvider';
 import { useReferenceData } from '@/lib/ReferenceData';
 import {
-  fetchCheckIns,
-  fetchFreezes,
-  fetchMember,
-  fetchPayments,
-  fetchSubscriptions,
-  signedPhotoUrl,
-  unfreezeSubscription,
+  fetchCheckIns, fetchFreezes, fetchMember, fetchPayments, fetchSubscriptions,
+  signedPhotoUrl, unfreezeSubscription,
 } from '@/lib/api';
 import { useAsync } from '@/lib/useAsync';
 import { localizedName, methodLabelKey } from '@/lib/display';
@@ -18,7 +13,8 @@ import { pickCurrent, subscriptionDisplayStatus } from '@/lib/subscriptionStatus
 import type { Plan, Subscription } from '@/lib/database.types';
 import { StatusBadge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
-import { Card, EmptyState, ErrorText, InlineLoading, PageHeader } from '@/components/ui/misc';
+import { EmptyState, ErrorText, InlineLoading, PageHeader } from '@/components/ui/misc';
+import { ChevronRight, Pencil, RefreshCw, Snowflake, ArrowUpRight, Check, ICON_SM } from '@/components/ui/icons';
 import { SubscriptionActionModal, type SubAction } from './SubscriptionActionModal';
 import type { MessageKey } from '@/i18n/dictionary';
 
@@ -42,17 +38,8 @@ export function MemberProfile() {
   const [busy, setBusy] = useState(false);
 
   const planName = (planId: string) => localizedName(plans.find((p) => p.id === planId) as Plan, locale);
-  const branchName = (bid: string | null) => {
-    const b = branches.find((x) => x.id === bid);
-    return b ? localizedName(b, locale) : '—';
-  };
-
-  const reloadAll = () => {
-    subs.reload();
-    payments.reload();
-    checkins.reload();
-    freezes.reload();
-  };
+  const branchName = (bid: string | null) => { const b = branches.find((x) => x.id === bid); return b ? localizedName(b, locale) : '—'; };
+  const reloadAll = () => { subs.reload(); payments.reload(); checkins.reload(); freezes.reload(); };
 
   if (member.loading) return <InlineLoading />;
   if (member.error || !member.data) return <ErrorText error={member.error ?? 'not found'} />;
@@ -64,175 +51,141 @@ export function MemberProfile() {
   async function doUnfreeze() {
     if (!current) return;
     setBusy(true);
-    try {
-      await unfreezeSubscription(current.id);
-      reloadAll();
-    } finally {
-      setBusy(false);
-    }
+    try { await unfreezeSubscription(current.id); reloadAll(); } finally { setBusy(false); }
   }
 
   return (
-    <div className="mx-auto max-w-3xl">
+    <div>
+      <button onClick={() => navigate('/dashboard/members')} className="mb-6 inline-flex items-center gap-1 text-sm text-muted hover:text-text">
+        <ChevronRight {...ICON_SM} className="rotate-180 rtl:rotate-0" /> {t('members.title')}
+      </button>
+
       <PageHeader
-        title={t('members.title')}
-        action={
-          <Button variant="secondary" onClick={() => navigate('/dashboard/members')}>
-            ← {t('members.title')}
-          </Button>
-        }
+        eyebrow={m.member_code ?? undefined}
+        title={m.full_name}
+        action={<Button variant="secondary" onClick={() => navigate(`/dashboard/members/${m.id}/edit`)}><Pencil {...ICON_SM} />{t('profile.edit')}</Button>}
       />
 
-      {/* Header card */}
-      <Card className="mb-4">
-        <div className="flex items-start gap-4">
-          <div className="h-20 w-20 shrink-0 overflow-hidden rounded-full bg-slate-100">
-            {photo.data ? (
-              <img src={photo.data} alt={m.full_name} className="h-full w-full object-cover" />
-            ) : (
-              <div className="flex h-full w-full items-center justify-center text-2xl text-slate-300">
-                {m.full_name.charAt(0)}
-              </div>
-            )}
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-2">
-              <h2 className="text-lg font-bold text-ink">{m.full_name}</h2>
-              <StatusBadge status={status} />
-            </div>
-            <p className="font-mono text-xs text-slate-400">{m.member_code}</p>
-            <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-sm text-slate-600">
-              <span dir="ltr" className="text-start">{m.phone}</span>
-              <span>{branchName(m.branch_id)}</span>
-              {m.dob && <span>{t('member.field.dob')}: {formatDate(m.dob, locale)}</span>}
-              {m.emergency_contact_phone && (
-                <span dir="ltr" className="text-start">{t('profile.emergency')}: {m.emergency_contact_phone}</span>
-              )}
-            </div>
-          </div>
-          <Button variant="secondary" onClick={() => navigate(`/dashboard/members/${m.id}/edit`)}>
-            {t('profile.edit')}
-          </Button>
+      {/* Identity row */}
+      <div className="mb-12 flex items-start gap-5">
+        <div className="h-20 w-20 shrink-0 overflow-hidden border border-border-strong">
+          {photo.data ? (
+            <img src={photo.data} alt={m.full_name} className="h-full w-full object-cover" />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center font-display text-2xl text-faint">{m.full_name.charAt(0)}</div>
+          )}
         </div>
-      </Card>
+        <div className="grid flex-1 grid-cols-2 gap-x-8 gap-y-2 pt-1 text-sm sm:grid-cols-4">
+          <Meta label={t('members.col.status')}><StatusBadge status={status} /></Meta>
+          <Meta label={t('members.col.phone')}><span dir="ltr" className="text-start text-text">{m.phone}</span></Meta>
+          <Meta label={t('members.col.branch')}><span className="text-text">{branchName(m.branch_id)}</span></Meta>
+          {m.dob && <Meta label={t('member.field.dob')}><span className="text-text">{formatDate(m.dob, locale)}</span></Meta>}
+          {m.emergency_contact_phone && <Meta label={t('profile.emergency')}><span dir="ltr" className="text-start text-text">{m.emergency_contact_phone}</span></Meta>}
+        </div>
+      </div>
 
-      {/* Current subscription + actions */}
-      <Card className="mb-4">
-        <h3 className="mb-3 text-sm font-semibold text-slate-500">{t('profile.current_sub')}</h3>
+      {/* Current subscription — lead panel */}
+      <section className="mb-12">
+        <p className="eyebrow mb-4">{t('profile.current_sub')}</p>
         {current ? (
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-sm">
-              <span className="text-slate-500">{t('profile.plan')}</span>
-              <span className="font-medium">{planName(current.plan_id)}</span>
-              <span className="text-slate-500">{t('profile.end')}</span>
-              <span className="font-medium">{formatDate(current.end_date, locale)}</span>
+          <div className="flex flex-wrap items-end justify-between gap-6 border-t border-border pt-5">
+            <div className="flex gap-12">
+              <div>
+                <p className="text-xs text-muted">{t('profile.plan')}</p>
+                <p className="font-display mt-1 text-2xl text-text">{planName(current.plan_id)}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted">{t('profile.end')}</p>
+                <p className="font-display mt-1 text-2xl text-text">{formatDate(current.end_date, locale)}</p>
+              </div>
               {current.frozen_days_used > 0 && (
-                <>
-                  <span className="text-slate-500">{t('profile.frozen_days')}</span>
-                  <span className="font-medium">{current.frozen_days_used}</span>
-                </>
+                <div>
+                  <p className="text-xs text-muted">{t('profile.frozen_days')}</p>
+                  <p className="font-display mt-1 text-2xl text-sand">{current.frozen_days_used}</p>
+                </div>
               )}
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button onClick={() => setAction('new')}>{t('sub.new')}</Button>
+              {current.status === 'pending' && <Button variant="secondary" onClick={() => setAction('activate')}><Check {...ICON_SM} />{t('sub.activate')}</Button>}
+              {current.status === 'active' && <>
+                <Button variant="secondary" onClick={() => setAction('renew')}><RefreshCw {...ICON_SM} />{t('sub.renew')}</Button>
+                <Button variant="secondary" onClick={() => setAction('freeze')}><Snowflake {...ICON_SM} />{t('sub.freeze')}</Button>
+                <Button variant="secondary" onClick={() => setAction('upgrade')}><ArrowUpRight {...ICON_SM} />{t('sub.upgrade')}</Button>
+              </>}
+              {current.status === 'frozen' && <>
+                <Button variant="secondary" loading={busy} onClick={doUnfreeze}>{t('sub.unfreeze')}</Button>
+                <Button variant="secondary" onClick={() => setAction('renew')}><RefreshCw {...ICON_SM} />{t('sub.renew')}</Button>
+              </>}
+              {(current.status === 'expired' || current.status === 'cancelled') && <Button variant="secondary" onClick={() => setAction('renew')}><RefreshCw {...ICON_SM} />{t('sub.renew')}</Button>}
             </div>
           </div>
         ) : (
-          <p className="text-sm text-slate-500">{t('profile.no_sub')}</p>
+          <div className="flex items-center justify-between border-t border-border pt-5">
+            <p className="text-muted">{t('profile.no_sub')}</p>
+            <Button onClick={() => setAction('new')}>{t('sub.new')}</Button>
+          </div>
         )}
-
-        <div className="mt-4 flex flex-wrap gap-2">
-          <Button onClick={() => setAction('new')}>{t('sub.new')}</Button>
-          {current?.status === 'pending' && (
-            <Button variant="secondary" onClick={() => setAction('activate')}>{t('sub.activate')}</Button>
-          )}
-          {current?.status === 'active' && (
-            <>
-              <Button variant="secondary" onClick={() => setAction('renew')}>{t('sub.renew')}</Button>
-              <Button variant="secondary" onClick={() => setAction('freeze')}>{t('sub.freeze')}</Button>
-              <Button variant="secondary" onClick={() => setAction('upgrade')}>{t('sub.upgrade')}</Button>
-            </>
-          )}
-          {current?.status === 'frozen' && (
-            <>
-              <Button variant="secondary" loading={busy} onClick={doUnfreeze}>{t('sub.unfreeze')}</Button>
-              <Button variant="secondary" onClick={() => setAction('renew')}>{t('sub.renew')}</Button>
-            </>
-          )}
-          {(current?.status === 'expired' || current?.status === 'cancelled') && (
-            <Button variant="secondary" onClick={() => setAction('renew')}>{t('sub.renew')}</Button>
-          )}
-        </div>
-      </Card>
+      </section>
 
       {/* History tabs */}
-      <div className="mb-3 flex gap-1 border-b border-slate-200">
+      <div className="mb-4 flex gap-6 border-b border-border">
         {(['subscriptions', 'payments', 'checkins', 'freezes'] as Tab[]).map((tk) => (
           <button
             key={tk}
             onClick={() => setTab(tk)}
-            className={`-mb-px border-b-2 px-3 py-2 text-sm font-medium transition ${
-              tab === tk ? 'border-brand text-brand' : 'border-transparent text-slate-500 hover:text-slate-700'
-            }`}
+            className={`-mb-px border-b-2 pb-2.5 text-sm transition-colors ${tab === tk ? 'border-accent text-text' : 'border-transparent text-muted hover:text-text'}`}
           >
             {t(`profile.tab.${tk}` as MessageKey)}
           </button>
         ))}
       </div>
 
-      {tab === 'subscriptions' && <SubsTable subs={subs.data ?? []} planName={planName} locale={locale} />}
+      {tab === 'subscriptions' && <SubsTable subs={subs.data ?? []} planName={planName} />}
       {tab === 'payments' && <PaymentsTable rows={payments.data ?? []} />}
       {tab === 'checkins' && <CheckinsTable rows={checkins.data ?? []} branchName={branchName} />}
       {tab === 'freezes' && <FreezesTable rows={freezes.data ?? []} />}
 
       {action && (
-        <SubscriptionActionModal
-          action={action}
-          member={m}
-          subscription={current}
-          onClose={() => setAction(null)}
-          onDone={reloadAll}
-        />
+        <SubscriptionActionModal action={action} member={m} subscription={current} onClose={() => setAction(null)} onDone={reloadAll} />
       )}
     </div>
   );
 }
 
-// ---- small tables ----
-function TableWrap({ children }: { children: React.ReactNode }) {
+function Meta({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
-      <table className="w-full text-start text-sm">{children}</table>
+    <div>
+      <p className="text-xs text-faint">{label}</p>
+      <div className="mt-0.5">{children}</div>
     </div>
   );
 }
-function Th({ children }: { children: React.ReactNode }) {
-  return <th className="px-3 py-2 text-start font-medium text-slate-500">{children}</th>;
-}
-function Td({ children, dir, className = '' }: { children: React.ReactNode; dir?: string; className?: string }) {
-  return <td dir={dir} className={`px-3 py-2 ${className}`}>{children}</td>;
-}
 
-function SubsTable({ subs, planName, locale }: { subs: Subscription[]; planName: (id: string) => string; locale: ReturnType<typeof useI18n>['locale'] }) {
-  const { t } = useI18n();
+function Table({ children }: { children: React.ReactNode }) {
+  return <div className="overflow-x-auto"><table className="w-full min-w-[30rem] text-start text-sm">{children}</table></div>;
+}
+function Th({ children }: { children: React.ReactNode }) { return <th className="px-3 py-2.5 text-start text-xs font-medium tracking-wide text-muted">{children}</th>; }
+function Td({ children, dir, className = '' }: { children: React.ReactNode; dir?: string; className?: string }) { return <td dir={dir} className={`px-3 py-3 ${className}`}>{children}</td>; }
+
+function SubsTable({ subs, planName }: { subs: Subscription[]; planName: (id: string) => string }) {
+  const { t, locale } = useI18n();
   if (subs.length === 0) return <EmptyState messageKey="sub.empty" />;
   return (
-    <TableWrap>
-      <thead className="border-b border-slate-200 bg-slate-50">
-        <tr>
-          <Th>{t('sub.col.plan')}</Th><Th>{t('sub.col.status')}</Th><Th>{t('sub.col.start')}</Th>
-          <Th>{t('sub.col.end')}</Th><Th>{t('sub.col.price')}</Th>
-        </tr>
-      </thead>
+    <Table>
+      <thead><tr className="border-b border-border"><Th>{t('sub.col.plan')}</Th><Th>{t('sub.col.status')}</Th><Th>{t('sub.col.start')}</Th><Th>{t('sub.col.end')}</Th><Th>{t('sub.col.price')}</Th></tr></thead>
       <tbody>
         {subs.map((s) => (
-          <tr key={s.id} className="border-b border-slate-100 last:border-0">
-            <Td className="font-medium">{planName(s.plan_id)}</Td>
+          <tr key={s.id} className="border-b border-border">
+            <Td className="font-medium text-text">{planName(s.plan_id)}</Td>
             <Td><StatusBadge status={subscriptionDisplayStatus(s)} /></Td>
-            <Td>{formatDate(s.start_date, locale)}</Td>
-            <Td>{formatDate(s.end_date, locale)}</Td>
-            <Td>{formatCurrency(s.price_paid, locale)}</Td>
+            <Td className="text-muted">{formatDate(s.start_date, locale)}</Td>
+            <Td className="text-muted">{formatDate(s.end_date, locale)}</Td>
+            <Td className="text-text">{formatCurrency(s.price_paid, locale)}</Td>
           </tr>
         ))}
       </tbody>
-    </TableWrap>
+    </Table>
   );
 }
 
@@ -240,21 +193,19 @@ function PaymentsTable({ rows }: { rows: import('@/lib/database.types').Payment[
   const { t, locale } = useI18n();
   if (rows.length === 0) return <EmptyState messageKey="pay.empty" />;
   return (
-    <TableWrap>
-      <thead className="border-b border-slate-200 bg-slate-50">
-        <tr><Th>{t('pay.col.date')}</Th><Th>{t('pay.col.amount')}</Th><Th>{t('pay.col.method')}</Th><Th>{t('pay.col.receipt')}</Th></tr>
-      </thead>
+    <Table>
+      <thead><tr className="border-b border-border"><Th>{t('pay.col.date')}</Th><Th>{t('pay.col.amount')}</Th><Th>{t('pay.col.method')}</Th><Th>{t('pay.col.receipt')}</Th></tr></thead>
       <tbody>
         {rows.map((p) => (
-          <tr key={p.id} className="border-b border-slate-100 last:border-0">
-            <Td>{formatDateTime(p.created_at, locale)}</Td>
-            <Td>{formatCurrency(p.amount, locale)}</Td>
-            <Td>{t(methodLabelKey(p.method))}</Td>
-            <Td className="font-mono text-xs text-slate-500">{p.receipt_number ?? '—'}</Td>
+          <tr key={p.id} className="border-b border-border">
+            <Td className="text-muted">{formatDateTime(p.created_at, locale)}</Td>
+            <Td className="text-text">{formatCurrency(p.amount, locale)}</Td>
+            <Td className="text-muted">{t(methodLabelKey(p.method))}</Td>
+            <Td className="font-mono text-xs text-faint">{p.receipt_number ?? '—'}</Td>
           </tr>
         ))}
       </tbody>
-    </TableWrap>
+    </Table>
   );
 }
 
@@ -262,19 +213,17 @@ function CheckinsTable({ rows, branchName }: { rows: import('@/lib/database.type
   const { t, locale } = useI18n();
   if (rows.length === 0) return <EmptyState messageKey="checkin.empty" />;
   return (
-    <TableWrap>
-      <thead className="border-b border-slate-200 bg-slate-50">
-        <tr><Th>{t('checkin.col.date')}</Th><Th>{t('checkin.col.branch')}</Th></tr>
-      </thead>
+    <Table>
+      <thead><tr className="border-b border-border"><Th>{t('checkin.col.date')}</Th><Th>{t('checkin.col.branch')}</Th></tr></thead>
       <tbody>
         {rows.map((c) => (
-          <tr key={c.id} className="border-b border-slate-100 last:border-0">
-            <Td>{formatDateTime(c.checked_in_at, locale)}</Td>
-            <Td>{branchName(c.branch_id)}</Td>
+          <tr key={c.id} className="border-b border-border">
+            <Td className="text-muted">{formatDateTime(c.checked_in_at, locale)}</Td>
+            <Td className="text-text">{branchName(c.branch_id)}</Td>
           </tr>
         ))}
       </tbody>
-    </TableWrap>
+    </Table>
   );
 }
 
@@ -282,18 +231,16 @@ function FreezesTable({ rows }: { rows: import('@/lib/database.types').Freeze[] 
   const { t, locale } = useI18n();
   if (rows.length === 0) return <EmptyState messageKey="freeze.empty" />;
   return (
-    <TableWrap>
-      <thead className="border-b border-slate-200 bg-slate-50">
-        <tr><Th>{t('freeze.col.period')}</Th><Th>{t('freeze.col.days')}</Th></tr>
-      </thead>
+    <Table>
+      <thead><tr className="border-b border-border"><Th>{t('freeze.col.period')}</Th><Th>{t('freeze.col.days')}</Th></tr></thead>
       <tbody>
         {rows.map((f) => (
-          <tr key={f.id} className="border-b border-slate-100 last:border-0">
-            <Td>{formatDate(f.start_date, locale)} — {formatDate(f.end_date, locale)}</Td>
-            <Td>{f.days}</Td>
+          <tr key={f.id} className="border-b border-border">
+            <Td className="text-muted">{formatDate(f.start_date, locale)} — {formatDate(f.end_date, locale)}</Td>
+            <Td className="text-text">{f.days}</Td>
           </tr>
         ))}
       </tbody>
-    </TableWrap>
+    </Table>
   );
 }

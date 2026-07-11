@@ -6,7 +6,7 @@ export function LangToggle({ className = '' }: { className?: string }) {
     <button
       type="button"
       onClick={toggleLocale}
-      className={`rounded-md border border-current/20 px-3 py-1 text-sm font-medium transition hover:bg-black/5 ${className}`}
+      className={`text-xs font-semibold tracking-wide text-muted transition-colors hover:text-text ${className}`}
     >
       {t('lang.toggle')}
     </button>

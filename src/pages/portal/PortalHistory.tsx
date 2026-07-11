@@ -16,9 +16,9 @@ export function PortalPayments() {
   if (loading) return <InlineLoading />;
   if ((data ?? []).length === 0) return <EmptyState messageKey="pay.empty" />;
   return (
-    <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
+    <div className="overflow-x-auto">
       <table className="w-full text-start text-sm">
-        <thead className="border-b border-slate-200 bg-slate-50 text-slate-500">
+        <thead className="border-b border-border text-muted">
           <tr>
             <th className="px-3 py-2 text-start font-medium">{t('pay.col.date')}</th>
             <th className="px-3 py-2 text-start font-medium">{t('pay.col.amount')}</th>
@@ -28,11 +28,11 @@ export function PortalPayments() {
         </thead>
         <tbody>
           {(data ?? []).map((p) => (
-            <tr key={p.id} className="border-b border-slate-100 last:border-0">
+            <tr key={p.id} className="border-b border-border">
               <td className="px-3 py-2">{formatDateTime(p.created_at, locale)}</td>
               <td className="px-3 py-2">{formatCurrency(p.amount, locale)}</td>
               <td className="px-3 py-2">{t(methodLabelKey(p.method))}</td>
-              <td className="px-3 py-2 font-mono text-xs text-slate-500">{p.receipt_number ?? '—'}</td>
+              <td className="px-3 py-2 font-mono text-xs text-muted">{p.receipt_number ?? '—'}</td>
             </tr>
           ))}
         </tbody>
@@ -51,7 +51,7 @@ export function PortalCheckins() {
   if (loading) return <InlineLoading />;
   if ((data ?? []).length === 0) return <EmptyState messageKey="checkin.empty" />;
   return (
-    <div className="divide-y divide-slate-100 rounded-xl border border-slate-200 bg-white">
+    <div className="divide-y divide-border rounded border border-border bg-surface">
       {(data ?? []).map((c) => (
         <div key={c.id} className="px-4 py-2.5 text-sm">
           {formatDateTime(c.checked_in_at, locale)}

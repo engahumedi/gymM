@@ -29,9 +29,9 @@ export function PlansList() {
       ) : plans.length === 0 ? (
         <EmptyState messageKey="sub.empty" />
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
+        <div className="overflow-x-auto">
           <table className="w-full text-start text-sm">
-            <thead className="border-b border-slate-200 bg-slate-50 text-slate-500">
+            <thead className="border-b border-border text-muted">
               <tr>
                 <th className="px-3 py-2 text-start font-medium">{t('plans.col.name')}</th>
                 <th className="px-3 py-2 text-start font-medium">{t('plans.col.duration')}</th>
@@ -45,7 +45,7 @@ export function PlansList() {
               {plans.map((p) => (
                 <tr
                   key={p.id}
-                  className="cursor-pointer border-b border-slate-100 last:border-0 hover:bg-slate-50"
+                  className="cursor-pointer border-b border-border hover:bg-surface"
                   onClick={() => setEditing(p)}
                 >
                   <td className="px-3 py-2 font-medium">{localizedName(p, locale)}</td>
@@ -152,11 +152,11 @@ function PlanForm({ plan, onClose, onSaved }: { plan: Plan | null; onClose: () =
             <TextInput type="number" min={1} value={f.sessions_count} onChange={(e) => setF({ ...f, sessions_count: e.target.value })} />
           </Field>
         </div>
-        <label className="flex items-center gap-2 text-sm text-slate-700">
+        <label className="flex items-center gap-2 text-sm text-text">
           <input type="checkbox" checked={f.all_branches_access} onChange={(e) => setF({ ...f, all_branches_access: e.target.checked })} />
           {t('plan.field.all_branches')}
         </label>
-        <label className="flex items-center gap-2 text-sm text-slate-700">
+        <label className="flex items-center gap-2 text-sm text-text">
           <input type="checkbox" checked={f.is_active} onChange={(e) => setF({ ...f, is_active: e.target.checked })} />
           {t('plan.field.active')}
         </label>

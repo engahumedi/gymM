@@ -44,22 +44,22 @@ export function PortalHome() {
       {/* Subscription status */}
       <Card>
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-slate-500">{t('portal.status')}</h2>
+          <h2 className="text-sm font-semibold text-muted">{t('portal.status')}</h2>
           <StatusBadge status={status} />
         </div>
         {current && current.status !== 'pending' ? (
           <div className="grid grid-cols-2 gap-y-2 text-sm">
-            <span className="text-slate-500">{t('portal.plan')}</span>
+            <span className="text-muted">{t('portal.plan')}</span>
             <span className="font-medium">{planName(current.plan_id)}</span>
-            <span className="text-slate-500">{t('portal.expiry')}</span>
+            <span className="text-muted">{t('portal.expiry')}</span>
             <span className="font-medium">{formatDate(current.end_date, locale)}</span>
           </div>
         ) : (
-          <p className="text-sm text-slate-500">{t('portal.no_active_sub')}</p>
+          <p className="text-sm text-muted">{t('portal.no_active_sub')}</p>
         )}
 
         {hasPending && (
-          <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">
+          <p className="mt-3 border-s-2 border-sand bg-surface-2 px-3 py-2 text-sm text-text">
             {t('portal.pending_note')}
           </p>
         )}
@@ -73,22 +73,22 @@ export function PortalHome() {
 
       {/* Notifications */}
       <div>
-        <h2 className="mb-2 text-sm font-semibold text-slate-500">{t('notif.title')}</h2>
+        <h2 className="mb-2 text-sm font-semibold text-muted">{t('notif.title')}</h2>
         {notifs.loading ? (
           <InlineLoading />
         ) : (notifs.data ?? []).length === 0 ? (
           <EmptyState messageKey="notif.empty" />
         ) : (
-          <div className="divide-y divide-slate-100 rounded-xl border border-slate-200 bg-white">
+          <div className="divide-y divide-border rounded border border-border bg-surface">
             {(notifs.data ?? []).map((n) => (
               <div key={n.id} className="flex items-start justify-between gap-3 px-4 py-3">
-                <div className={n.status === 'read' ? 'text-slate-400' : 'text-ink'}>
+                <div className={n.status === 'read' ? 'text-faint' : 'text-text'}>
                   <p className="text-sm">{locale === 'ar' ? n.message_ar : n.message_en}</p>
-                  <p className="mt-0.5 text-xs text-slate-400">{formatDateTime(n.created_at, locale)}</p>
+                  <p className="mt-0.5 text-xs text-faint">{formatDateTime(n.created_at, locale)}</p>
                 </div>
                 {n.status !== 'read' && (
                   <button
-                    className="shrink-0 text-xs font-semibold text-brand hover:underline"
+                    className="shrink-0 text-xs font-semibold text-accent hover:underline"
                     onClick={async () => {
                       await markNotificationRead(n.id);
                       notifs.reload();
@@ -154,7 +154,7 @@ function RenewalRequest({
     <Modal open onClose={onClose} title={t('portal.request.title')}>
       {done ? (
         <div className="space-y-4">
-          <p className="rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700">{t('portal.request_sent')}</p>
+          <p className="border-s-2 border-good bg-surface-2 px-3 py-2 text-sm text-text">{t('portal.request_sent')}</p>
           <Button onClick={onDone}>{t('common.save')}</Button>
         </div>
       ) : (

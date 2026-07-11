@@ -1,4 +1,5 @@
 import { useEffect, type ReactNode } from 'react';
+import { X, ICON } from './icons';
 
 export function Modal({
   open,
@@ -20,26 +21,18 @@ export function Modal({
 
   if (!open) return null;
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
-      onClick={onClose}
-    >
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/60 p-4 pt-[8vh]" onClick={onClose}>
       <div
-        className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl bg-white p-6 shadow-2xl"
+        className="w-full max-w-md rounded-lg border border-border bg-surface"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="mb-4 flex items-center justify-between">
-          <h3 className="text-lg font-bold text-ink">{title}</h3>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
-            aria-label="close"
-          >
-            ✕
+        <div className="flex items-center justify-between border-b border-border px-5 py-3.5">
+          <h3 className="font-display text-lg text-text">{title}</h3>
+          <button type="button" onClick={onClose} className="text-muted transition-colors hover:text-text" aria-label="close">
+            <X {...ICON} />
           </button>
         </div>
-        {children}
+        <div className="p-5">{children}</div>
       </div>
     </div>
   );

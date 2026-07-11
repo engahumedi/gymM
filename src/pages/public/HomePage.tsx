@@ -3,6 +3,7 @@ import { useI18n } from '@/i18n/I18nProvider';
 import { usePublicData } from '@/lib/PublicData';
 import { localizedName } from '@/lib/display';
 import { InlineLoading } from '@/components/ui/misc';
+import { ArrowUpRight, MapPin, ICON_SM } from '@/components/ui/icons';
 import { Section, PlanCard, pick } from './components';
 
 export function HomePage() {
@@ -16,20 +17,24 @@ export function HomePage() {
   const facilities = (content.facilities?.items as { ar: string; en: string }[] | undefined) ?? [];
   const testimonials = (content.testimonials?.items as { name_ar: string; name_en: string; text_ar: string; text_en: string }[] | undefined) ?? [];
   const faq = (content.faq?.items as { q_ar: string; a_ar: string; q_en: string; a_en: string }[] | undefined) ?? [];
+  const featuredId = plans.reduce((a, b) => (b.duration_months > (a?.duration_months ?? 0) ? b : a), plans[0])?.id;
 
   return (
-    <div className="text-slate-100">
-      {/* Hero */}
-      <section className="relative overflow-hidden bg-slate-950">
-        <div className="mx-auto max-w-6xl px-4 py-28 text-center">
-          <h1 className="mx-auto max-w-3xl text-4xl font-extrabold leading-tight md:text-6xl">{heroTitle}</h1>
-          <p className="mx-auto mt-4 max-w-2xl text-lg text-slate-300">{heroSub}</p>
-          <div className="mt-8 flex justify-center gap-3">
-            <Link to="/join" className="rounded-lg bg-brand px-6 py-3 text-sm font-semibold text-white hover:bg-brand-dark">
+    <div>
+      {/* Hero — asymmetric: oversized title, meta pinned to the side */}
+      <section className="mx-auto max-w-content px-5 pt-20 pb-24">
+        <p className="eyebrow mb-6">{t('pub.hero.eyebrow')}</p>
+        <h1 className="font-display max-w-4xl text-balance text-5xl leading-[1.02] text-text sm:text-7xl md:text-8xl">
+          {heroTitle}
+        </h1>
+        <div className="mt-10 flex flex-col gap-8 border-t border-border pt-8 md:flex-row md:items-end md:justify-between">
+          <p className="max-w-md text-lg leading-relaxed text-muted">{heroSub}</p>
+          <div className="flex items-center gap-6">
+            <Link to="/join" className="rounded bg-accent px-6 py-3 text-sm font-semibold text-white hover:brightness-110">
               {t('pub.hero.cta')}
             </Link>
-            <Link to="/plans" className="rounded-lg border border-white/20 px-6 py-3 text-sm font-semibold hover:bg-white/10">
-              {t('pub.hero.plans')}
+            <Link to="/plans" className="inline-flex items-center gap-1.5 text-sm font-semibold text-text hover:text-accent">
+              {t('pub.hero.plans')} <ArrowUpRight {...ICON_SM} />
             </Link>
           </div>
         </div>
@@ -37,27 +42,27 @@ export function HomePage() {
 
       {/* Plans */}
       {plans.length > 0 && (
-        <Section id="plans" title={t('pub.plans.title')}>
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-            {plans.map((p) => <PlanCard key={p.id} plan={p} />)}
+        <Section id="plans" eyebrow={t('pub.plans.eyebrow')} title={t('pub.plans.title')}>
+          <div className="grid gap-x-8 sm:grid-cols-2 lg:grid-cols-4">
+            {plans.map((p) => <PlanCard key={p.id} plan={p} featured={p.id === featuredId} />)}
           </div>
         </Section>
       )}
 
-      {/* Branches */}
+      {/* Branches — two-column list, hairline separated */}
       {branches.length > 0 && (
-        <Section id="branches" title={t('pub.branches.title')} dark>
-          <div className="grid gap-6 md:grid-cols-2">
+        <Section id="branches" eyebrow={t('pub.branches.eyebrow')} title={t('pub.branches.title')}>
+          <div className="grid gap-x-12 md:grid-cols-2">
             {branches.map((b) => (
-              <div key={b.id} className="rounded-2xl border border-white/10 bg-slate-800/50 p-6">
-                <h3 className="text-lg font-bold">{localizedName(b, locale)}</h3>
-                <p className="mt-1 text-sm text-slate-400">
-                  {locale === 'ar' ? b.address_ar : b.address_en} — {b.city}
-                </p>
-                {b.phone && <p dir="ltr" className="mt-1 text-start text-sm text-slate-400">{b.phone}</p>}
+              <div key={b.id} className="flex items-start justify-between gap-4 border-t border-border py-6">
+                <div>
+                  <h3 className="font-display text-xl">{localizedName(b, locale)}</h3>
+                  <p className="mt-1 text-sm text-muted">{locale === 'ar' ? b.address_ar : b.address_en} — {b.city}</p>
+                  {b.phone && <p dir="ltr" className="mt-1 text-start text-sm text-faint">{b.phone}</p>}
+                </div>
                 {b.map_url && (
-                  <a href={b.map_url} target="_blank" rel="noreferrer" className="mt-3 inline-block text-sm font-semibold text-brand hover:underline">
-                    {t('pub.branches.map')} →
+                  <a href={b.map_url} target="_blank" rel="noreferrer" className="mt-1 inline-flex shrink-0 items-center gap-1 text-sm text-accent hover:gap-2 transition-all">
+                    <MapPin {...ICON_SM} /> {t('pub.branches.map')}
                   </a>
                 )}
               </div>
@@ -68,28 +73,29 @@ export function HomePage() {
 
       {/* Trainers */}
       {trainers.length > 0 && (
-        <Section id="trainers" title={t('pub.trainers.title')}>
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+        <Section eyebrow={t('pub.trainers.eyebrow')} title={t('pub.trainers.title')}>
+          <div className="grid gap-x-8 gap-y-10 sm:grid-cols-2 lg:grid-cols-4">
             {trainers.map((tr) => (
-              <div key={tr.id} className="rounded-2xl border border-white/10 bg-slate-800/50 p-6 text-center">
-                <div className="mx-auto mb-3 flex h-20 w-20 items-center justify-center rounded-full bg-slate-700 text-2xl">
+              <div key={tr.id}>
+                <div className="mb-4 flex h-16 w-16 items-center justify-center border border-border-strong font-display text-2xl text-muted">
                   {(locale === 'ar' ? tr.name_ar : tr.name_en).charAt(0)}
                 </div>
-                <h3 className="font-bold">{locale === 'ar' ? tr.name_ar : tr.name_en}</h3>
-                <p className="text-sm text-brand">{locale === 'ar' ? tr.specialty_ar : tr.specialty_en}</p>
+                <h3 className="font-display text-lg">{locale === 'ar' ? tr.name_ar : tr.name_en}</h3>
+                <p className="text-sm text-accent">{locale === 'ar' ? tr.specialty_ar : tr.specialty_en}</p>
               </div>
             ))}
           </div>
         </Section>
       )}
 
-      {/* Facilities */}
+      {/* Facilities — numbered editorial list */}
       {facilities.length > 0 && (
-        <Section title={t('pub.facilities.title')} dark>
-          <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+        <Section eyebrow={t('pub.facilities.eyebrow')} title={t('pub.facilities.title')}>
+          <div className="grid gap-x-8 sm:grid-cols-2 lg:grid-cols-4">
             {facilities.map((f, i) => (
-              <div key={i} className="rounded-xl border border-white/10 bg-slate-800/50 p-6 text-center font-semibold">
-                {locale === 'ar' ? f.ar : f.en}
+              <div key={i} className="flex items-baseline gap-3 border-t border-border py-5">
+                <span className="font-display text-sm text-faint">{String(i + 1).padStart(2, '0')}</span>
+                <span className="text-lg text-text">{locale === 'ar' ? f.ar : f.en}</span>
               </div>
             ))}
           </div>
@@ -98,13 +104,15 @@ export function HomePage() {
 
       {/* Testimonials */}
       {testimonials.length > 0 && (
-        <Section title={t('pub.testimonials.title')}>
-          <div className="grid gap-6 md:grid-cols-2">
+        <Section eyebrow={t('pub.testimonials.eyebrow')} title={t('pub.testimonials.title')}>
+          <div className="grid gap-12 md:grid-cols-2">
             {testimonials.map((tm, i) => (
-              <div key={i} className="rounded-2xl border border-white/10 bg-slate-800/50 p-6">
-                <p className="text-slate-200">“{locale === 'ar' ? tm.text_ar : tm.text_en}”</p>
-                <p className="mt-3 text-sm font-semibold text-brand">— {locale === 'ar' ? tm.name_ar : tm.name_en}</p>
-              </div>
+              <figure key={i}>
+                <blockquote className="font-display text-2xl leading-snug text-text">
+                  {locale === 'ar' ? tm.text_ar : tm.text_en}
+                </blockquote>
+                <figcaption className="mt-4 text-sm text-accent">— {locale === 'ar' ? tm.name_ar : tm.name_en}</figcaption>
+              </figure>
             ))}
           </div>
         </Section>
@@ -112,24 +120,28 @@ export function HomePage() {
 
       {/* FAQ */}
       {faq.length > 0 && (
-        <Section title={t('pub.faq.title')} dark>
-          <div className="mx-auto max-w-3xl space-y-4">
+        <Section eyebrow={t('pub.faq.eyebrow')} title={t('pub.faq.title')}>
+          <div className="max-w-2xl">
             {faq.map((item, i) => (
-              <details key={i} className="rounded-xl border border-white/10 bg-slate-800/50 p-4">
-                <summary className="cursor-pointer font-semibold">{locale === 'ar' ? item.q_ar : item.q_en}</summary>
-                <p className="mt-2 text-sm text-slate-300">{locale === 'ar' ? item.a_ar : item.a_en}</p>
+              <details key={i} className="group border-t border-border py-5">
+                <summary className="cursor-pointer list-none text-lg text-text marker:hidden">
+                  {locale === 'ar' ? item.q_ar : item.q_en}
+                </summary>
+                <p className="mt-3 text-muted">{locale === 'ar' ? item.a_ar : item.a_en}</p>
               </details>
             ))}
           </div>
         </Section>
       )}
 
-      {/* Contact */}
-      <Section id="contact" title={t('pub.contact.title')}>
-        <div className="mx-auto max-w-md text-center text-slate-300">
-          {gym?.contact_phone && <p dir="ltr">{t('pub.contact.phone')}: {gym.contact_phone}</p>}
-          {gym?.contact_email && <p dir="ltr">{t('pub.contact.email')}: {gym.contact_email}</p>}
-          <Link to="/join" className="mt-6 inline-block rounded-lg bg-brand px-6 py-3 text-sm font-semibold text-white hover:bg-brand-dark">
+      {/* Contact / closing CTA — asymmetric */}
+      <Section id="contact" eyebrow={t('pub.contact.eyebrow')} title={t('pub.contact.title')}>
+        <div className="flex flex-col gap-8 md:flex-row md:items-end md:justify-between">
+          <div className="space-y-1 text-muted">
+            {gym?.contact_phone && <p dir="ltr" className="text-start">{gym.contact_phone}</p>}
+            {gym?.contact_email && <p dir="ltr" className="text-start">{gym.contact_email}</p>}
+          </div>
+          <Link to="/join" className="rounded bg-accent px-6 py-3 text-sm font-semibold text-white hover:brightness-110">
             {t('pub.hero.cta')}
           </Link>
         </div>

@@ -206,3 +206,25 @@
 - **The whole marketing site is data-driven** via `PublicDataProvider` (gym, plans, branches,
   trainers, `site_content`), all anon-readable, so a new gym rebrands by editing rows. `site_content`
   is a generic key→JSON store (hero/faq/testimonials/facilities) to avoid a table per section.
+
+## Phase 8 — Editorial-athletic redesign
+
+- **Aesthetic committed up front** (owner picked "editorial athletic") before any CSS, per the
+  design brief. One dark system across public + dashboard + portal for cohesion (overrides the
+  original "light dashboard" note — a single deep ground reads more intentional).
+- **Design tokens as CSS variables** in `src/index.css`; `tailwind.config.js` replaces the
+  entire colour scale with those tokens so no default Tailwind palette (slate/indigo/…) can be
+  used. One radius vocabulary (≤8px, mostly 4px), one spacing rhythm.
+- **Fonts self-hosted** (downloaded woff2 subsets, bundled by Vite) to honour "no external CDN
+  at runtime": Reem Kufi for Arabic display, Fraunces for Latin display (switched via
+  `html[lang]`), IBM Plex Sans Arabic for body. A characterful display face is what gives the
+  UI its voice.
+- **Icons = lucide-react only**, one stroke (1.5) and size system (`components/ui/icons.tsx`).
+  All emoji removed from UI and dictionary.
+- **Anti-generic rules enforced**: hairlines + whitespace instead of a card around everything;
+  no shadows/glow; the crimson accent touches only the primary action / active state / one dot;
+  strong type hierarchy (oversized display titles vs calm body); asymmetric, off-centre
+  compositions; one primary button per screen. Recharts themed for the dark ground; the
+  check-in heatmap is a custom CSS grid.
+- **`.env.production` retained** for the client-safe keys (Pages build); redesign added no new
+  secrets or migrations.
