@@ -47,7 +47,7 @@ export function PublicLayout() {
               </Link>
             ) : (
               <>
-                <Link to="/login" className="hidden text-sm text-muted hover:text-text sm:block">
+                <Link to="/login" className="text-sm text-muted hover:text-text">
                   {t('nav.login')}
                 </Link>
                 <Link to="/join" className="rounded bg-accent px-4 py-2 text-sm font-semibold text-white hover:brightness-110">
