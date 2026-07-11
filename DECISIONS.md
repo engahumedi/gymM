@@ -46,3 +46,29 @@
   `0002` RLS (helpers + policies), `0003` storage bucket + placeholder RPCs. `seed.sql`
   loads demo data (1 gym, 2 branches, 4 plans, ~50 members with mixed statuses, payments,
   check-in history).
+
+## Phase 2 — Auth + role-based routing
+
+- **Hash routing on GitHub Pages** (`react-router` `createHashRouter`). URLs look like
+  `/#/dashboard`. Chosen over history routing + `404.html` because Pages serves static
+  files with no SPA fallback; hash routing needs zero server config and no redirect hack —
+  the simplest reliable option, and it can never 404 on refresh. (User deferred the choice.)
+
+- **i18n = tiny hand-rolled dictionary + React context**, not a heavy library. `ar` is the
+  default; direction (`dir=rtl`/`ltr`) and `lang` are set on `<html>` from the active locale.
+  A `useI18n()` hook exposes `t(key)` and `locale`. No hardcoded strings anywhere.
+
+- **Single Supabase client** (`src/lib/supabase.ts`) reads `VITE_SUPABASE_URL` /
+  `VITE_SUPABASE_ANON_KEY` from env. Auth session persists in localStorage (supabase-js
+  default). An `AuthProvider` loads the user's `profiles` row (role, branch_id, member_id)
+  once on session change and exposes it via `useAuth()`.
+
+- **One login page → redirect by role.** A `RequireRole` guard wraps routes; the post-login
+  landing is derived from `profile.role` (super_admin/reception → `/dashboard`,
+  member → `/portal`). Public marketing site is unauthenticated at `/`.
+
+- **Three layout shells:** `PublicLayout` (dark athletic), `DashboardLayout` (light admin,
+  sidebar), `PortalLayout` (member). Built as skeletons in Phase 2; filled in later phases.
+
+- **Tailwind for styling**, IBM Plex Sans Arabic as the primary font (loaded via CSS; will
+  self-host or use a bundled font in the polish phase to avoid external CDN at runtime).

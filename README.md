@@ -51,6 +51,37 @@ creates their `profiles` row as `member` automatically.
 Copy `.env.example` → `.env` and fill in your Supabase URL + anon key (both are safe to
 expose client-side; RLS protects the data). **Never** commit the service-role key.
 
+## Frontend (Phase 2 — auth + role routing)
+
+```bash
+npm install
+cp .env.example .env      # fill in VITE_SUPABASE_URL + VITE_SUPABASE_ANON_KEY
+npm run dev               # http://localhost:5173
+npm run build             # type-check + production build to dist/
+```
+
+- **Single login** at `/#/login` → redirect by role: super admin / reception → `/#/dashboard`,
+  member → `/#/portal`. Routes are guarded by `RequireRole` (client convenience only — the
+  real security is RLS in the database).
+- **i18n:** Arabic (RTL) is the default; the header toggle switches to English (LTR). All
+  copy comes from `src/i18n/dictionary.ts` — no hardcoded strings.
+- **Hash routing** (`/#/...`) is used so GitHub Pages needs no SPA-fallback config and never
+  404s on refresh.
+
+If the Supabase env vars are missing, the app renders a clear "configuration missing" screen
+instead of a blank page.
+
+## Deployment (GitHub Pages)
+
+Automated via `.github/workflows/deploy.yml` on every push to `main`.
+
+1. In the repo: **Settings → Secrets and variables → Actions**, add
+   `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` (both client-safe).
+2. **Settings → Pages → Build and deployment → Source: GitHub Actions**.
+3. Push to `main`. The workflow builds with `base: /gymM/` and deploys.
+4. Live URL: `https://<your-username>.github.io/gymM/`
+   (if you fork/rename the repo, set the `VITE_BASE` env or edit `vite.config.ts`).
+
 ## Rebrand for another gym
 
 All branding lives in the `gyms` row and `site_content` / `plans` / `branches` / `trainers`
