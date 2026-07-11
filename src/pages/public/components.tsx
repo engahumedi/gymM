@@ -2,50 +2,63 @@ import { Link } from 'react-router-dom';
 import { useI18n } from '@/i18n/I18nProvider';
 import { localizedName } from '@/lib/display';
 import { formatCurrency } from '@/lib/format';
+import { Check, ArrowUpRight, ICON_SM } from '@/components/ui/icons';
 import type { Plan } from '@/lib/database.types';
 
+// A section separated by whitespace + a hairline rule, with an editorial
+// eyebrow/title on the start side — not a centred heading.
 export function Section({
   id,
+  eyebrow,
   title,
   children,
-  dark,
 }: {
   id?: string;
+  eyebrow?: string;
   title?: string;
   children: React.ReactNode;
-  dark?: boolean;
 }) {
   return (
-    <section id={id} className={`py-16 ${dark ? 'bg-slate-900' : 'bg-slate-950'}`}>
-      <div className="mx-auto max-w-6xl px-4">
-        {title && <h2 className="mb-8 text-center text-2xl font-extrabold text-white md:text-3xl">{title}</h2>}
+    <section id={id} className="border-t border-border">
+      <div className="mx-auto max-w-content px-5 py-20">
+        {title && (
+          <div className="mb-12 max-w-2xl">
+            {eyebrow && <p className="eyebrow mb-3">{eyebrow}</p>}
+            <h2 className="font-display text-3xl leading-tight md:text-5xl">{title}</h2>
+          </div>
+        )}
         {children}
       </div>
     </section>
   );
 }
 
-export function PlanCard({ plan }: { plan: Plan }) {
+export function PlanCard({ plan, featured }: { plan: Plan; featured?: boolean }) {
   const { t, locale } = useI18n();
+  const feats = [
+    plan.all_branches_access ? t('pub.plans.access_all') : t('pub.plans.access_single'),
+    `${plan.freeze_allowance_days} ${t('pub.plans.freeze')}`,
+  ];
   return (
-    <div className="flex flex-col rounded-2xl border border-white/10 bg-slate-800/60 p-6 text-slate-100">
-      <h3 className="text-lg font-bold">{localizedName(plan, locale)}</h3>
-      <p className="mt-2 text-3xl font-extrabold text-brand">
-        {formatCurrency(plan.price, locale)}
-      </p>
-      <p className="text-sm text-slate-400">
+    <div className={`flex flex-col py-6 ${featured ? 'border-t-2 border-accent' : 'border-t border-border'}`}>
+      <h3 className="text-sm font-semibold tracking-wide text-muted">{localizedName(plan, locale)}</h3>
+      <p className="font-display mt-3 text-4xl text-text">{formatCurrency(plan.price, locale)}</p>
+      <p className="mt-1 text-sm text-faint">
         / {plan.duration_months} {plan.duration_months === 1 ? t('pub.plans.month') : t('pub.plans.months')}
       </p>
-      <ul className="mt-4 flex-1 space-y-2 text-sm text-slate-300">
-        <li>• {plan.all_branches_access ? t('pub.plans.access_all') : t('pub.plans.access_single')}</li>
-        <li>• {plan.freeze_allowance_days} {t('pub.plans.freeze')}</li>
-        {plan.sessions_count != null && <li>• {plan.sessions_count} {t('sub.field.days')}</li>}
+      <ul className="mt-6 flex-1 space-y-2.5 text-sm text-text/80">
+        {feats.map((f, i) => (
+          <li key={i} className="flex items-center gap-2">
+            <Check {...ICON_SM} className={featured ? 'text-accent' : 'text-muted'} />
+            {f}
+          </li>
+        ))}
       </ul>
       <Link
         to={`/join?plan=${plan.id}`}
-        className="mt-6 rounded-lg bg-brand px-4 py-2 text-center text-sm font-semibold text-white hover:bg-brand-dark"
+        className={`mt-6 inline-flex items-center gap-1.5 text-sm font-semibold ${featured ? 'text-accent' : 'text-text'} hover:gap-2.5 transition-all`}
       >
-        {t('pub.plans.choose')}
+        {t('pub.plans.choose')} <ArrowUpRight {...ICON_SM} />
       </Link>
     </div>
   );

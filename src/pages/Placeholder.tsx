@@ -1,14 +1,14 @@
 import { useI18n } from '@/i18n/I18nProvider';
+import { PageHeader } from '@/components/ui/misc';
 import type { MessageKey } from '@/i18n/dictionary';
 
-// Lightweight stub for screens delivered in later phases. Keeps routing and
-// layouts fully wired and testable now without faking functionality.
+// Stub for screens delivered later. Keeps routing/layout live without faking UI.
 export function Placeholder({ titleKey }: { titleKey: MessageKey }) {
   const { t } = useI18n();
   return (
-    <section className="rounded-xl border border-dashed border-slate-300 bg-white/60 p-10 text-center">
-      <h2 className="text-lg font-bold text-ink">{t(titleKey)}</h2>
-      <p className="mt-2 text-sm text-slate-500">{t('common.soon')}</p>
-    </section>
+    <div>
+      <PageHeader title={t(titleKey)} eyebrow={t('common.soon')} />
+      <p className="max-w-md text-muted">{t('common.soon.body')}</p>
+    </div>
   );
 }

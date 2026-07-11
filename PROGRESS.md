@@ -10,10 +10,10 @@ failure-case testing, and is committed.
 - [x] **Phase 5** — Notifications engine
 - [x] **Phase 6** — Analytics dashboard
 - [x] **Phase 7** — Public website + Join Now flow
-- [ ] **Phase 8** — Polish: RTL audit, empty states, loading skeletons, error handling → verify Pages deploy
+- [x] **Phase 8** — Polish + UI redesign (editorial-athletic), RTL audit, error handling → verify Pages deploy
 
-**Current phase: 8** — Phases 1–7 complete and verified against the live Supabase project.
-UI polish is intentionally deferred to Phase 8 (per the project owner) — functional first.
+**Status: all 8 phases complete.** Verified against the live Supabase project; the app is
+redesigned (editorial-athletic) and deployed to GitHub Pages.
 
 ## Handoff — read this first in a new session
 
@@ -49,6 +49,34 @@ UI polish is intentionally deferred to Phase 8 (per the project owner) — funct
 
 ## Session notes
 <!-- Append a short report after each phase: what was tested, what passed, what was fixed. -->
+
+### Phase 8 — Polish + editorial-athletic redesign (2026-07-11) ✅
+Full UI redesign to an **editorial-athletic** aesthetic (owner-approved), following a strict
+"no generic AI look" brief.
+
+- **Design tokens** (`src/index.css`) as CSS variables: deep charcoal ground `#0d0f12`,
+  surfaces stepping up, hairline borders, warm off-white ink, one restrained crimson accent
+  `#c8342f` + a rare sand. No default Tailwind palette — `tailwind.config.js` maps colours to
+  the variables; single radius vocabulary (≤8px) and spacing scale.
+- **Distinctive self-hosted fonts** (no CDN at runtime): Reem Kufi (Arabic display), Fraunces
+  (Latin display, switched by `html[lang]`), IBM Plex Sans Arabic (body). 11 woff2 subsets
+  bundled by Vite.
+- **Thin lucide-react icons** (one stroke/size system) replace every emoji; emoji scrubbed
+  from the dictionary too.
+- **De-carded**: hairline dividers + whitespace instead of rounded-card-everything; no
+  shadows/glow; strong type hierarchy (oversized display titles, calm body); asymmetric,
+  off-centre compositions; one primary action per screen.
+- Rebuilt primitives (Button/Field/Badge/Modal/misc), all three layouts, and every screen
+  (public site, login, dashboard + all admin screens, member portal, receipt, analytics with
+  dark Recharts theming + custom heatmap). RTL handled with logical properties throughout.
+
+**Tested:**
+- `npm run build` passes; fonts bundle; Analytics stays lazy-loaded.
+- Compliance sweep: no banned Tailwind palette classes, no `shadow`/`rounded-xl/2xl`, no stray
+  `bg-white` (except the intentional printable receipt paper), no emoji anywhere in `src`.
+- Rendered check (headless Chromium) of login + 404: Reem Kufi display face applied, body ground
+  `rgb(13,15,18)`, asymmetric editorial layout, single crimson action, no page errors.
+- Live GitHub Pages deploy verified after merge.
 
 ### Phase 7 — Public website + Join Now (2026-07-11) ✅
 **DB (`0007_public_join.sql`, applied live):** `public_join(full_name, phone, gender, plan, branch)`

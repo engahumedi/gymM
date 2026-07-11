@@ -119,7 +119,7 @@ export function MemberForm() {
   return (
     <div className="mx-auto max-w-xl">
       <PageHeader title={t((editing ? 'member.edit.title' : 'member.register.title') as MessageKey)} />
-      <form onSubmit={onSubmit} className="space-y-4 rounded-xl border border-slate-200 bg-white p-5">
+      <form onSubmit={onSubmit} className="max-w-xl space-y-5">
         <Field label={t('member.field.name')} required error={fieldErr.full_name ? t('err.generic') : undefined}>
           <TextInput value={form.full_name} onChange={(e) => set('full_name', e.target.value)} />
         </Field>

@@ -8,14 +8,12 @@ import { useI18n } from '@/i18n/I18nProvider';
 import { LangToggle } from '@/components/LangToggle';
 import { ConfigError } from '@/components/ConfigError';
 import { FullPageSpinner } from '@/components/FullPageSpinner';
+import { Field, TextInput } from '@/components/ui/Field';
+import { Button } from '@/components/ui/Button';
+import { ErrorText } from '@/components/ui/misc';
 
-const schema = z.object({
-  email: z.string().email(),
-  password: z.string().min(1),
-});
+const schema = z.object({ email: z.string().email(), password: z.string().min(1) });
 
-// Single login page for all roles. After sign-in, AuthProvider loads the
-// profile and we redirect by role.
 export function LoginPage() {
   const { t } = useI18n();
   const { session, profile, loading } = useAuth();
@@ -28,8 +26,6 @@ export function LoginPage() {
 
   if (!isSupabaseConfigured) return <ConfigError />;
   if (loading) return <FullPageSpinner />;
-
-  // Already signed in → go to role home (or the page they came from).
   if (session && profile) {
     const from = (location.state as { from?: string } | null)?.from;
     return <Navigate to={from ?? roleHome(profile.role)} replace />;
@@ -39,75 +35,50 @@ export function LoginPage() {
     e.preventDefault();
     setError(null);
     const parsed = schema.safeParse({ email, password });
-    if (!parsed.success) {
-      setError(t('auth.error.invalid'));
-      return;
-    }
+    if (!parsed.success) return setError(t('auth.error.invalid'));
     setSubmitting(true);
     const { error: signInError } = await supabase.auth.signInWithPassword(parsed.data);
     setSubmitting(false);
-    if (signInError) {
-      setError(t('auth.error.invalid'));
-      return;
-    }
-    // AuthProvider's onAuthStateChange will populate the profile; navigate to a
-    // neutral path and let the guard/redirect resolve the destination by role.
+    if (signInError) return setError(t('auth.error.invalid'));
     navigate('/login', { replace: true });
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-950 p-4">
-      <div className="w-full max-w-sm rounded-2xl bg-white p-8 shadow-2xl">
-        <div className="mb-6 flex items-center justify-between">
-          <div>
-            <h1 className="text-xl font-extrabold text-brand">{t('app.name')}</h1>
-            <p className="text-sm text-slate-500">{t('auth.login.title')}</p>
-          </div>
-          <LangToggle />
+    <div className="grid min-h-screen bg-bg lg:grid-cols-[1.1fr_1fr]">
+      {/* Editorial panel */}
+      <div className="relative hidden flex-col justify-between border-e border-border p-12 lg:flex">
+        <span className="font-display text-2xl">{t('app.name')}</span>
+        <div>
+          <p className="eyebrow mb-4">{t('auth.panel.eyebrow')}</p>
+          <h1 className="font-display max-w-md text-5xl leading-[1.05] text-text">{t('auth.panel.title')}</h1>
         </div>
+        <span className="text-sm text-faint">© {new Date().getFullYear()} {t('app.name')}</span>
+      </div>
 
-        <form onSubmit={onSubmit} className="space-y-4">
-          <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700">
-              {t('auth.email')}
-            </label>
-            <input
-              type="email"
-              autoComplete="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-brand focus:ring-1 focus:ring-brand"
-              dir="ltr"
-              required
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700">
-              {t('auth.password')}
-            </label>
-            <input
-              type="password"
-              autoComplete="current-password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-brand focus:ring-1 focus:ring-brand"
-              dir="ltr"
-              required
-            />
+      {/* Form */}
+      <div className="flex flex-col justify-center px-6 py-12 sm:px-16">
+        <div className="mx-auto w-full max-w-sm">
+          <div className="mb-8 flex items-center justify-between">
+            <div>
+              <p className="eyebrow mb-1 lg:hidden">{t('app.name')}</p>
+              <h2 className="font-display text-2xl">{t('auth.login.title')}</h2>
+            </div>
+            <LangToggle />
           </div>
 
-          {error && (
-            <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>
-          )}
-
-          <button
-            type="submit"
-            disabled={submitting}
-            className="w-full rounded-lg bg-brand py-2 text-sm font-semibold text-white transition hover:bg-brand-dark disabled:opacity-60"
-          >
-            {submitting ? t('auth.signing_in') : t('auth.submit')}
-          </button>
-        </form>
+          <form onSubmit={onSubmit} className="space-y-5">
+            <Field label={t('auth.email')}>
+              <TextInput type="email" autoComplete="email" dir="ltr" value={email} onChange={(e) => setEmail(e.target.value)} required />
+            </Field>
+            <Field label={t('auth.password')}>
+              <TextInput type="password" autoComplete="current-password" dir="ltr" value={password} onChange={(e) => setPassword(e.target.value)} required />
+            </Field>
+            <ErrorText error={error} />
+            <Button type="submit" loading={submitting} className="w-full">
+              {submitting ? t('auth.signing_in') : t('auth.submit')}
+            </Button>
+          </form>
+        </div>
       </div>
     </div>
   );

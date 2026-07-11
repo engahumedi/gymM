@@ -7,36 +7,31 @@ import { PublicDataProvider } from '@/lib/PublicData';
 import type { MessageKey } from '@/i18n/dictionary';
 
 const navItems: { to: string; key: MessageKey }[] = [
-  { to: '/', key: 'nav.home' },
   { to: '/plans', key: 'nav.plans' },
   { to: '/branches', key: 'nav.branches' },
   { to: '/trainers', key: 'nav.trainers' },
   { to: '/contact', key: 'nav.contact' },
 ];
 
-// Dark athletic theme for the public marketing site.
 export function PublicLayout() {
   const { t } = useI18n();
   const { session, profile } = useAuth();
 
   return (
-    <div className="flex min-h-screen flex-col bg-slate-950 text-slate-100">
-      <header className="sticky top-0 z-20 border-b border-white/10 bg-slate-950/80 backdrop-blur">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
-          <Link to="/" className="text-lg font-extrabold tracking-tight">
-            <span className="text-brand">{t('app.name')}</span>
+    <div className="flex min-h-screen flex-col bg-bg text-text">
+      <header className="sticky top-0 z-20 border-b border-border bg-bg/85 backdrop-blur">
+        <div className="mx-auto flex max-w-content items-center gap-8 px-5 py-4">
+          <Link to="/" className="font-display text-xl tracking-tight">
+            {t('app.name')}
           </Link>
 
-          <nav className="hidden items-center gap-6 md:flex">
+          <nav className="hidden items-center gap-7 md:flex">
             {navItems.map((item) => (
               <NavLink
                 key={item.to}
                 to={item.to}
-                end={item.to === '/'}
                 className={({ isActive }) =>
-                  `text-sm transition hover:text-brand ${
-                    isActive ? 'text-brand' : 'text-slate-300'
-                  }`
+                  `text-sm transition-colors hover:text-text ${isActive ? 'text-text' : 'text-muted'}`
                 }
               >
                 {t(item.key)}
@@ -44,27 +39,18 @@ export function PublicLayout() {
             ))}
           </nav>
 
-          <div className="flex items-center gap-2">
-            <LangToggle className="text-slate-200" />
+          <div className="flex items-center gap-5 ms-auto">
+            <LangToggle />
             {session ? (
-              <Link
-                to={roleHome(profile?.role)}
-                className="rounded-md bg-brand px-3 py-1.5 text-sm font-semibold text-white hover:bg-brand-dark"
-              >
+              <Link to={roleHome(profile?.role)} className="text-sm font-semibold text-text hover:text-accent">
                 {t('dashboard.title')}
               </Link>
             ) : (
               <>
-                <Link
-                  to="/login"
-                  className="rounded-md px-3 py-1.5 text-sm font-medium text-slate-200 hover:text-white"
-                >
+                <Link to="/login" className="hidden text-sm text-muted hover:text-text sm:block">
                   {t('nav.login')}
                 </Link>
-                <Link
-                  to="/join"
-                  className="rounded-md bg-brand px-3 py-1.5 text-sm font-semibold text-white hover:bg-brand-dark"
-                >
+                <Link to="/join" className="rounded bg-accent px-4 py-2 text-sm font-semibold text-white hover:brightness-110">
                   {t('nav.join')}
                 </Link>
               </>
@@ -79,8 +65,11 @@ export function PublicLayout() {
         </PublicDataProvider>
       </main>
 
-      <footer className="border-t border-white/10 py-6 text-center text-sm text-slate-400">
-        © {new Date().getFullYear()} {t('app.name')}
+      <footer className="border-t border-border">
+        <div className="mx-auto flex max-w-content flex-col gap-1 px-5 py-8 text-sm text-muted">
+          <span className="font-display text-base text-text">{t('app.name')}</span>
+          <span>© {new Date().getFullYear()}</span>
+        </div>
       </footer>
     </div>
   );

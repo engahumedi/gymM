@@ -126,7 +126,7 @@ export const dictionary = {
   'join.password': { ar: 'كلمة المرور', en: 'Password' },
   'join.submit': { ar: 'إنشاء الحساب والاشتراك', en: 'Create account & join' },
   'join.have_account': { ar: 'لديك حساب؟ تسجيل الدخول', en: 'Have an account? Sign in' },
-  'join.success.title': { ar: 'تم إنشاء طلبك! 🎉', en: 'Your request is created! 🎉' },
+  'join.success.title': { ar: 'تم إنشاء طلبك', en: 'Your request is in' },
   'join.success.body': { ar: 'اشتراكك معلّق — توجّه للفرع وادفع ليقوم الاستقبال بتفعيله.', en: 'Your subscription is pending — visit the branch and pay so reception can activate it.' },
   'join.success.portal': { ar: 'الذهاب لحسابي', en: 'Go to my account' },
 
@@ -136,7 +136,7 @@ export const dictionary = {
   'checkin.search_hint': { ar: 'اكتب جوال العضو أو رقمه للبحث', en: 'Type a phone or member ID to search' },
   'checkin.no_match': { ar: 'لا يوجد عضو مطابق', en: 'No matching member' },
   'checkin.do': { ar: 'تسجيل حضور', en: 'Check in' },
-  'checkin.success': { ar: 'تم تسجيل الحضور ✓', en: 'Checked in ✓' },
+  'checkin.success': { ar: 'تم تسجيل الحضور', en: 'Checked in' },
   'checkin.blocked': { ar: 'تعذّر تسجيل الحضور', en: 'Check-in blocked' },
   'checkin.today': { ar: 'حضور اليوم', en: "Today's check-ins" },
   'checkin.go_renew': { ar: 'تجديد الاشتراك', en: 'Renew subscription' },
@@ -359,6 +359,23 @@ export const dictionary = {
   },
 
   'notfound.title': { ar: 'الصفحة غير موجودة', en: 'Page not found' },
+
+  // --- Phase 8 editorial copy ---
+  'common.soon.body': { ar: 'هذه الشاشة تُبنى في مرحلة لاحقة.', en: 'This screen ships in a later phase.' },
+  'auth.panel.eyebrow': { ar: 'دخول الفريق والأعضاء', en: 'Staff & member access' },
+  'auth.panel.title': { ar: 'ادخل، وابدأ يومك في النادي', en: 'Sign in, and get to work.' },
+  'dash.eyebrow': { ar: 'نظرة عامة', en: 'Overview' },
+  'checkin.eyebrow': { ar: 'الاستقبال', en: 'Front desk' },
+  'analytics.eyebrow': { ar: 'الأداء', en: 'Performance' },
+  'join.eyebrow': { ar: 'عضوية جديدة', en: 'New membership' },
+  'pub.hero.eyebrow': { ar: 'نادٍ رياضي متعدد الفروع', en: 'A multi-branch strength club' },
+  'pub.plans.eyebrow': { ar: 'العضويات', en: 'Memberships' },
+  'pub.branches.eyebrow': { ar: 'المواقع', en: 'Locations' },
+  'pub.trainers.eyebrow': { ar: 'الطاقم', en: 'The team' },
+  'pub.facilities.eyebrow': { ar: 'المكان', en: 'The space' },
+  'pub.testimonials.eyebrow': { ar: 'من الأعضاء', en: 'From members' },
+  'pub.faq.eyebrow': { ar: 'أسئلة', en: 'Questions' },
+  'pub.contact.eyebrow': { ar: 'زُرنا', en: 'Come by' },
 } as const;
 
 export type MessageKey = keyof typeof dictionary;
