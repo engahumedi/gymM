@@ -12,7 +12,7 @@ export const DIRECTION: Record<Locale, 'rtl' | 'ltr'> = {
 
 // A flat key → { ar, en } map keeps lookups trivial and type-safe.
 export const dictionary = {
-  'app.name': { ar: 'نادي القوة', en: 'Power Gym' },
+  'app.name': { ar: 'أبطال الرياضة', en: 'Sports Champions' },
   'app.tagline': {
     ar: 'طوّر قوتك',
     en: 'Build your strength',
@@ -69,6 +69,7 @@ export const dictionary = {
   // --- errors ---
   'err.duplicate_phone': { ar: 'رقم الجوال مسجّل مسبقاً', en: 'Phone number already registered' },
   'err.invalid_phone': { ar: 'رقم جوال سعودي غير صحيح', en: 'Invalid Saudi phone number' },
+  'err.invalid_national_id': { ar: 'رقم هوية غير صحيح (10 أرقام تبدأ بـ 1 أو 2)', en: 'Invalid national ID (10 digits, starts with 1 or 2)' },
   'err.freeze_cap': { ar: 'تجاوزت أيام التجميد المسموحة في الباقة', en: 'Exceeds the plan freeze allowance' },
   'err.not_active': { ar: 'الاشتراك ليس نشطاً', en: 'Subscription is not active' },
   'err.not_frozen': { ar: 'الاشتراك ليس مجمّداً', en: 'Subscription is not frozen' },
@@ -121,6 +122,7 @@ export const dictionary = {
   'join.branch': { ar: 'الفرع', en: 'Branch' },
   'join.name': { ar: 'الاسم الكامل', en: 'Full name' },
   'join.phone': { ar: 'رقم الجوال', en: 'Phone number' },
+  'join.national_id': { ar: 'رقم الهوية', en: 'National ID' },
   'join.gender': { ar: 'الجنس', en: 'Gender' },
   'join.email': { ar: 'البريد الإلكتروني', en: 'Email' },
   'join.password': { ar: 'كلمة المرور', en: 'Password' },
@@ -180,6 +182,9 @@ export const dictionary = {
   'members.col.phone': { ar: 'الجوال', en: 'Phone' },
   'members.col.branch': { ar: 'الفرع', en: 'Branch' },
   'members.col.status': { ar: 'الحالة', en: 'Status' },
+  'members.col.start': { ar: 'بداية الاشتراك', en: 'Start' },
+  'members.col.end': { ar: 'نهاية الاشتراك', en: 'Expiry' },
+  'members.col.remaining': { ar: 'المتبقي', en: 'Remaining' },
   'members.empty': { ar: 'لا يوجد أعضاء مطابقون', en: 'No matching members' },
   'members.count': { ar: 'عضو', en: 'members' },
 
@@ -188,6 +193,7 @@ export const dictionary = {
   'member.edit.title': { ar: 'تعديل بيانات العضو', en: 'Edit member' },
   'member.field.name': { ar: 'الاسم الكامل', en: 'Full name' },
   'member.field.phone': { ar: 'رقم الجوال', en: 'Phone number' },
+  'member.field.national_id': { ar: 'رقم الهوية', en: 'National ID' },
   'member.field.gender': { ar: 'الجنس', en: 'Gender' },
   'member.field.male': { ar: 'ذكر', en: 'Male' },
   'member.field.female': { ar: 'أنثى', en: 'Female' },
@@ -314,6 +320,9 @@ export const dictionary = {
   'portal.pending_note': { ar: 'لديك طلب تجديد معلّق بانتظار التفعيل', en: 'You have a pending renewal awaiting activation' },
   'portal.plan': { ar: 'الباقة', en: 'Plan' },
   'portal.expiry': { ar: 'تاريخ الانتهاء', en: 'Expiry date' },
+  'portal.remaining': { ar: 'المتبقي', en: 'Remaining' },
+  'days.left': { ar: 'باقي {n} يوم', en: '{n} days left' },
+  'days.expired_ago': { ar: 'انتهى منذ {n} يوم', en: 'expired {n}d ago' },
 
   // --- analytics ---
   'analytics.title': { ar: 'التحليلات', en: 'Analytics' },
@@ -333,6 +342,8 @@ export const dictionary = {
   'analytics.chart.growth': { ar: 'نمو الأعضاء', en: 'Member growth' },
   'analytics.chart.plans': { ar: 'شعبية الباقات', en: 'Plan popularity' },
   'analytics.chart.heatmap': { ar: 'أوقات الذروة (تسجيلات الحضور)', en: 'Peak hours (check-ins)' },
+  'analytics.heat.less': { ar: 'أقل', en: 'Less' },
+  'analytics.heat.more': { ar: 'أكثر', en: 'More' },
   'analytics.total': { ar: 'الإجمالي', en: 'Total' },
   'analytics.members': { ar: 'الأعضاء', en: 'Members' },
   'analytics.export': { ar: 'تصدير CSV', en: 'Export CSV' },

@@ -78,6 +78,7 @@ export function MemberProfile() {
         <div className="grid flex-1 grid-cols-2 gap-x-8 gap-y-2 pt-1 text-sm sm:grid-cols-4">
           <Meta label={t('members.col.status')}><StatusBadge status={status} /></Meta>
           <Meta label={t('members.col.phone')}><span dir="ltr" className="text-start text-text">{m.phone}</span></Meta>
+          <Meta label={t('member.field.national_id')}><span dir="ltr" className="text-start text-text">{m.national_id ?? '—'}</span></Meta>
           <Meta label={t('members.col.branch')}><span className="text-text">{branchName(m.branch_id)}</span></Meta>
           {m.dob && <Meta label={t('member.field.dob')}><span className="text-text">{formatDate(m.dob, locale)}</span></Meta>}
           {m.emergency_contact_phone && <Meta label={t('profile.emergency')}><span dir="ltr" className="text-start text-text">{m.emergency_contact_phone}</span></Meta>}

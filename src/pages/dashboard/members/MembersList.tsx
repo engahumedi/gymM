@@ -6,11 +6,12 @@ import { useReferenceData } from '@/lib/ReferenceData';
 import { fetchMembers, type MemberListItem } from '@/lib/api';
 import { useAsync } from '@/lib/useAsync';
 import { localizedName } from '@/lib/display';
+import { formatDate } from '@/lib/format';
 import { pickCurrent, subscriptionDisplayStatus, type DisplayStatus } from '@/lib/subscriptionStatus';
 import { StatusBadge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { SelectInput } from '@/components/ui/Field';
-import { InlineLoading, EmptyState, ErrorText, PageHeader } from '@/components/ui/misc';
+import { InlineLoading, EmptyState, ErrorText, PageHeader, DaysLeft } from '@/components/ui/misc';
 import { Search, UserPlus, ICON_SM } from '@/components/ui/icons';
 
 const STATUS_OPTIONS: DisplayStatus[] = ['active', 'expiring', 'expired', 'frozen', 'pending', 'none'];
@@ -30,7 +31,7 @@ export function MembersList() {
   const rows = useMemo(() => {
     const q = search.trim().toLowerCase();
     return (data ?? [])
-      .map((m) => ({ m, status: subscriptionDisplayStatus(pickCurrent(m.subscriptions ?? [])) }))
+      .map((m) => { const sub = pickCurrent(m.subscriptions ?? []); return { m, sub, status: subscriptionDisplayStatus(sub) }; })
       .filter(({ m, status }) => {
         if (q && !`${m.full_name} ${m.phone} ${m.member_code ?? ''}`.toLowerCase().includes(q)) return false;
         if (statusFilter && status !== statusFilter) return false;
@@ -81,15 +82,17 @@ export function MembersList() {
         <EmptyState messageKey="members.empty" />
       ) : (
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[36rem] text-start text-sm">
+          <table className="w-full min-w-[52rem] text-start text-sm">
             <thead>
               <tr className="border-b border-border text-xs tracking-wide text-muted">
                 <Th>{t('members.col.code')}</Th><Th>{t('members.col.name')}</Th>
-                <Th>{t('members.col.phone')}</Th><Th>{t('members.col.branch')}</Th><Th>{t('members.col.status')}</Th>
+                <Th>{t('members.col.phone')}</Th><Th>{t('members.col.branch')}</Th>
+                <Th>{t('members.col.start')}</Th><Th>{t('members.col.end')}</Th>
+                <Th>{t('members.col.remaining')}</Th><Th>{t('members.col.status')}</Th>
               </tr>
             </thead>
             <tbody>
-              {rows.map(({ m, status }) => (
+              {rows.map(({ m, sub, status }) => (
                 <tr
                   key={m.id}
                   onClick={() => navigate(`/dashboard/members/${m.id}`)}
@@ -99,6 +102,9 @@ export function MembersList() {
                   <Td className="font-medium text-text">{m.full_name}</Td>
                   <Td dir="ltr" className="text-start text-muted">{m.phone}</Td>
                   <Td className="text-muted">{branchName(m.branch_id)}</Td>
+                  <Td className="text-muted">{formatDate(sub?.start_date, locale)}</Td>
+                  <Td className="text-muted">{formatDate(sub?.end_date, locale)}</Td>
+                  <Td>{sub && (sub.status === 'active' || sub.status === 'frozen') ? <DaysLeft end={sub.end_date} /> : <span className="text-faint">—</span>}</Td>
                   <Td><StatusBadge status={status} /></Td>
                 </tr>
               ))}

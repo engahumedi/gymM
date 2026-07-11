@@ -2,6 +2,17 @@ import type { ReactNode } from 'react';
 import { useI18n } from '@/i18n/I18nProvider';
 import type { MessageKey } from '@/i18n/dictionary';
 import { AlertCircle, ICON } from './icons';
+import { daysUntil } from '@/lib/format';
+
+// Compact "N days left" / "expired N days ago" counter, coloured by urgency.
+export function DaysLeft({ end }: { end: string | null | undefined }) {
+  const { t } = useI18n();
+  const d = daysUntil(end);
+  if (d === null) return <span className="text-faint">—</span>;
+  if (d < 0) return <span className="text-accent">{t('days.expired_ago').replace('{n}', String(-d))}</span>;
+  const tone = d <= 7 ? 'text-warn' : 'text-good';
+  return <span className={tone}>{t('days.left').replace('{n}', String(d))}</span>;
+}
 
 // A quiet surface panel — hairline border, small radius, no shadow. Used
 // sparingly; most separation is done with hairlines + whitespace instead.

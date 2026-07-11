@@ -5,7 +5,7 @@ import { useI18n } from '@/i18n/I18nProvider';
 import { useAuth } from '@/auth/AuthProvider';
 import { usePublicData } from '@/lib/PublicData';
 import { signUpAndJoin } from '@/lib/api';
-import { normalizeSaudiPhone, SAUDI_PHONE_RE } from '@/lib/phone';
+import { normalizeSaudiPhone, SAUDI_PHONE_RE, SAUDI_ID_RE } from '@/lib/phone';
 import { errorMessageKey } from '@/lib/errors';
 import { localizedName } from '@/lib/display';
 import { formatCurrency } from '@/lib/format';
@@ -18,6 +18,7 @@ import type { Gender } from '@/lib/database.types';
 const schema = z.object({
   fullName: z.string().trim().min(2),
   phone: z.string().regex(SAUDI_PHONE_RE),
+  nationalId: z.string().trim().regex(SAUDI_ID_RE),
   email: z.string().email(),
   password: z.string().min(6),
   planId: z.string().uuid(),
@@ -32,7 +33,7 @@ export function JoinPage() {
   const [params] = useSearchParams();
 
   const [form, setForm] = useState({
-    fullName: '', phone: '', email: '', password: '',
+    fullName: '', phone: '', nationalId: '', email: '', password: '',
     gender: '' as '' | Gender,
     planId: params.get('plan') ?? '', branchId: '',
   });
@@ -109,14 +110,17 @@ export function JoinPage() {
           <Field label={t('join.phone')} required error={fieldErr.phone ? t('err.invalid_phone') : undefined}>
             <TextInput dir="ltr" placeholder="05XXXXXXXX" value={form.phone} onChange={(e) => set('phone', e.target.value)} />
           </Field>
-          <Field label={t('join.gender')}>
-            <SelectInput value={form.gender} onChange={(e) => set('gender', e.target.value)}>
-              <option value="">—</option>
-              <option value="male">{t('member.field.male')}</option>
-              <option value="female">{t('member.field.female')}</option>
-            </SelectInput>
+          <Field label={t('join.national_id')} required error={fieldErr.nationalId ? t('err.invalid_national_id') : undefined}>
+            <TextInput dir="ltr" inputMode="numeric" maxLength={10} placeholder="1XXXXXXXXX" value={form.nationalId} onChange={(e) => set('nationalId', e.target.value)} />
           </Field>
         </div>
+        <Field label={t('join.gender')}>
+          <SelectInput value={form.gender} onChange={(e) => set('gender', e.target.value)}>
+            <option value="">—</option>
+            <option value="male">{t('member.field.male')}</option>
+            <option value="female">{t('member.field.female')}</option>
+          </SelectInput>
+        </Field>
         <Field label={t('join.email')} required error={fieldErr.email ? ' ' : undefined}>
           <TextInput type="email" dir="ltr" value={form.email} onChange={(e) => set('email', e.target.value)} />
         </Field>
