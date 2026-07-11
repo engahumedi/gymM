@@ -8,11 +8,11 @@ failure-case testing, and is committed.
 - [x] **Phase 3** — Members + plans + subscriptions core
 - [x] **Phase 4** — Check-in + manual payments
 - [x] **Phase 5** — Notifications engine
-- [ ] **Phase 6** — Analytics dashboard
+- [x] **Phase 6** — Analytics dashboard
 - [ ] **Phase 7** — Public website + Join Now flow
 - [ ] **Phase 8** — Polish: RTL audit, empty states, loading skeletons, error handling → verify Pages deploy
 
-**Current phase: 6** — Phases 1–5 complete and verified against the live Supabase project.
+**Current phase: 7** — Phases 1–6 complete and verified against the live Supabase project.
 UI polish is intentionally deferred to Phase 8 (per the project owner) — functional first.
 
 ## Handoff — read this first in a new session
@@ -20,7 +20,8 @@ UI polish is intentionally deferred to Phase 8 (per the project owner) — funct
 - **Repo layout:** `main` contains Phases 1–3 (merged via PR #1, #2). Continue development on
   branch **`claude/gym-system-bootstrap-mnn1vh`** (it is in sync with `main`). Docs live at the
   repo root: `SPEC.md`, `CLAUDE.md`, `PROGRESS.md`, `DECISIONS.md`, `README.md`.
-- **Next up: Phase 6** — analytics dashboard (KPI cards + charts with Recharts + CSV export).
+- **Next up: Phase 7** — public marketing website + "Join Now" flow (visitor picks plan+branch
+  → account → pending subscription → reception activates). All content data-driven from the DB.
 - **UI note:** the project owner said the current UI is rough and will be polished later
   (Phase 8). Keep building functionality first; don't over-invest in styling before then.
 - **Live Supabase project:** URL `https://hfjyaduiynigylvunnto.supabase.co` (ref
@@ -44,6 +45,25 @@ UI polish is intentionally deferred to Phase 8 (per the project owner) — funct
 
 ## Session notes
 <!-- Append a short report after each phase: what was tested, what passed, what was fixed. -->
+
+### Phase 6 — Analytics dashboard (2026-07-11) ✅
+**UI (super-admin only):** date-range (3/6/12 mo) + branch filters; six KPI cards (active
+members, new this month, revenue this month, expiring ≤7d, renewal rate, churn rate — simple
+proxies); charts via **Recharts** — revenue over time (total + per-branch lines), member growth
+(cumulative area), plan popularity (bar); a custom CSS **check-in heatmap** (7 days × hours,
+Riyadh time); **CSV export** on each dataset (BOM for Arabic in Excel). Pure aggregation lives
+in `src/lib/analytics.ts`; all client-side on RLS-scoped rows. No new migration.
+
+**Tested:**
+- `npm run build` passes; **Analytics route lazy-loaded** so Recharts sits in a separate 402 KB
+  chunk and the main bundle drops back to ~558 KB (loads only when analytics is opened).
+- Data sources fetch correctly as admin via PostgREST (50 members / 56 payments / 302 check-ins).
+- Aggregation cross-checked against SQL: plan popularity (~12–13 per plan), total revenue
+  (44,800), and check-in peak hours (Riyadh 21/22/10) all match the client-side computations.
+
+**Env limitation (unchanged):** charts verified via data + build, not a rendered browser
+session (sandbox browser can't reach Supabase). They'll render in a real browser / on Pages.
+Chart styling is intentionally minimal — refined in the Phase 8 UI polish.
 
 ### Phase 5 — Notifications engine (2026-07-11) ✅
 **DB (`0006_notifications.sql`, applied live):** `enqueue_expiry_notifications()` inserts one
