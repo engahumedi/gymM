@@ -19,6 +19,8 @@ export function errorMessageKey(message: string | null | undefined): MessageKey 
   if (m.includes('checkin_frozen')) return 'err.checkin_frozen';
   if (m.includes('checkin_expired')) return 'err.checkin_expired';
   if (m.includes('checkin_no_sessions')) return 'err.checkin_no_sessions';
+  if (m.includes('request_exists')) return 'err.freeze_request_exists';
+  if (m.includes('not_pending')) return 'err.not_pending';
   if (m.includes('already_member')) return 'err.already_member';
   if (m.includes('already registered') || m.includes('user already') || m.includes('email_exists'))
     return 'err.email_taken';

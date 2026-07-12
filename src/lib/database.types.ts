@@ -132,6 +132,21 @@ export interface Freeze {
   created_at: string;
 }
 
+export type FreezeRequestStatus = 'pending' | 'approved' | 'rejected';
+
+export interface FreezeRequest {
+  id: string;
+  subscription_id: string;
+  member_id: string;
+  branch_id: string | null;
+  days: number;
+  note: string | null;
+  status: FreezeRequestStatus;
+  created_at: string;
+  decided_at: string | null;
+  decided_by: string | null;
+}
+
 export type NotificationChannel = 'in_app' | 'whatsapp' | 'sms';
 export type NotificationStatus = 'simulated' | 'queued' | 'sent' | 'failed' | 'read';
 
@@ -191,6 +206,7 @@ export interface Database {
       notifications: Row<Notification>;
       trainers: Row<Trainer>;
       site_content: Row<SiteContent>;
+      freeze_requests: Row<FreezeRequest>;
     };
     Views: Record<string, never>;
     Functions: {

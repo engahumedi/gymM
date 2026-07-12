@@ -29,7 +29,8 @@ redesigned (editorial-athletic) and deployed to GitHub Pages.
 - **UI note:** the project owner said the current UI is rough and will be polished later
   (Phase 8). Keep building functionality first; don't over-invest in styling before then.
 - **Live Supabase project:** URL `https://hfjyaduiynigylvunnto.supabase.co` (ref
-  `hfjyaduiynigylvunnto`, Postgres 17). Schema + RLS + functions + seed are already applied.
+  `hfjyaduiynigylvunnto`, Postgres 17). Schema + RLS + functions + seed are already applied,
+  **migrations through `0009`** (`supabase/apply_all.sql` is the regenerated one-paste bundle).
 - **What a new session must get from the user** (nothing secret is committed):
   1. `VITE_SUPABASE_URL` + **anon** key → create a local `.env` (gitignored) so `npm run
      dev/build` hit the live project. The anon key is client-safe (RLS protects data).
@@ -79,6 +80,15 @@ Full UI redesign to an **editorial-athletic** aesthetic (owner-approved), follow
 - Live GitHub Pages deploy verified after merge.
 
 ### Post-launch tweaks (owner requests) ✅
+- **Member-initiated freeze requests** (`0009` migration): a member requests to pause their
+  active subscription for N days (portal button + modal, capped by the plan's freeze allowance,
+  one pending request at a time); reception/super-admin see a **freeze-requests queue** on the
+  dashboard and **Approve/Reject**. Approve applies `freeze_subscription`, so the expiry is
+  extended by N days — the paused days are **not** deducted from remaining. RPCs:
+  `request_freeze` / `approve_freeze_request` / `reject_freeze_request` (SECURITY DEFINER with
+  role checks); `freeze_requests` table with member/staff read RLS. Verified live end-to-end
+  (request → duplicate blocked → reception sees it → approve → expiry +N, `frozen_days_used`+N).
+- Added a **Login link** to the public home hero (+ header login visible on mobile).
 - Rebranded the gym to **أبطال الرياضة** / Sports Champions (dictionary `app.name` + `gyms` row + seed).
 - Added **national ID** to members (`0008` migration; required in reception + Join forms with
   Saudi-ID validation, shown on the profile; `public_join` gained `p_national_id`; live members backfilled).
