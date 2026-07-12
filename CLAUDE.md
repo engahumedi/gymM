@@ -42,8 +42,9 @@ over HTTPS) and the sandbox networking notes.
 
 **Post-launch additions:** national ID on members, member-initiated **freeze requests** with
 reception approval (`freeze_requests`, migration `0009`), rebrand to **أبطال الرياضة**, and a
-home login link. DB migrations run through `0009` (all applied live; `supabase/apply_all.sql`
-is the one-paste bundle).
+home login link, and a full white-label **Settings** screen (gym identity, branch CRUD, staff
+invites, site-content/trainers editors). DB migrations run through `0010` (all applied live;
+`supabase/apply_all.sql` is the one-paste bundle).
 
 ## Pointer
 Full requirements live in **SPEC.md** — read the relevant section before starting any phase.

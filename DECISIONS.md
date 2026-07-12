@@ -243,3 +243,29 @@
   status to `subscriptions`.
 - **Rebrand** to أبطال الرياضة / Sports Champions lives in data (`gyms` row + seed) and the
   `app.name` dictionary entry.
+
+## Settings — white-label admin (Category 1)
+
+- **Settings is one tabbed screen**, not four routes (`SettingsPage` with local tab state:
+  Identity/Branches/Staff/Content). Simplest reliable option — no extra router wiring, and the
+  nav already has a single "Settings" entry. Each tab is its own component file.
+- **No new RLS for identity/branches/trainers/site_content.** `0002` already grants the
+  super-admin gym-scoped writes to all four public tables, so these features are pure UI + typed
+  `api.ts` helpers over existing policies. Verified live that reception is blocked (403 / 0 rows).
+- **Logos and trainer photos go to the existing public `public-assets` bucket** (public read,
+  super-admin write policy already in `0003`), returning a stable public URL — unlike member
+  photos which use signed URLs from a private bucket. Correct because these assets are shown on
+  the anonymous marketing site.
+- **Staff invites avoid `service_role` in the browser entirely.** Creating an auth user needs the
+  service key or an Edge Function; deploying/testing an Edge Function isn't viable in this
+  HTTPS-only sandbox, and the service key must never reach client code. Chosen pattern: a
+  `staff_invites` table (`0010`, super-admin RLS only) + an **extended `handle_new_user()` trigger**
+  that, on sign-up, promotes a profile to the invited `reception` role/branch when a pending invite
+  matches the email (else the original member default). The super-admin shares a
+  `#/staff-signup?email=…` link; the invitee sets their own password on the new public
+  `StaffSignupPage`. Security stays server-side (SECURITY DEFINER trigger + RLS); no privileged key
+  is exposed. Invite `role` is CHECK-constrained to `reception` so the flow can never mint an admin.
+- **Site content uses structured editors, not raw JSON.** `site_content` is a generic key→JSONB
+  store, but a free-form JSON textarea is easy to corrupt and would break the public site. Instead
+  each known key (hero/facilities/testimonials/faq) has typed fields (a reusable list editor for the
+  array sections), round-tripping the exact shape the marketing pages read.

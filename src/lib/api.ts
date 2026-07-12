@@ -424,3 +424,142 @@ export async function createPlan(payload: PlanInput): Promise<Plan> {
 export async function updatePlan(id: string, patch: Partial<PlanInput>): Promise<Plan> {
   return unwrap(await supabase.from('plans').update(patch as never).eq('id', id).select().single());
 }
+
+// ---- Settings: gym identity (super-admin) ---------------------------------
+export type GymPatch = Partial<
+  Pick<
+    Gym,
+    | 'name_ar'
+    | 'name_en'
+    | 'logo_url'
+    | 'primary_color'
+    | 'secondary_color'
+    | 'contact_email'
+    | 'contact_phone'
+    | 'social_links'
+  >
+>;
+
+export async function updateGym(id: string, patch: GymPatch): Promise<Gym> {
+  return unwrap(await supabase.from('gyms').update(patch as never).eq('id', id).select().single());
+}
+
+// ---- Settings: branches (super-admin CRUD) --------------------------------
+export type BranchInput = Omit<Branch, 'id' | 'created_at'>;
+
+export async function createBranch(payload: BranchInput): Promise<Branch> {
+  return unwrap(await supabase.from('branches').insert(payload as never).select().single());
+}
+
+export async function updateBranch(id: string, patch: Partial<BranchInput>): Promise<Branch> {
+  return unwrap(await supabase.from('branches').update(patch as never).eq('id', id).select().single());
+}
+
+// ---- Settings: trainers (super-admin CRUD) --------------------------------
+export type TrainerInput = Omit<Trainer, 'id' | 'created_at'>;
+
+// All trainers in scope (incl. inactive) for the admin editor.
+export async function fetchAllTrainers(): Promise<Trainer[]> {
+  return unwrap(await supabase.from('trainers').select('*').order('sort_order'));
+}
+
+export async function createTrainer(payload: TrainerInput): Promise<Trainer> {
+  return unwrap(await supabase.from('trainers').insert(payload as never).select().single());
+}
+
+export async function updateTrainer(id: string, patch: Partial<TrainerInput>): Promise<Trainer> {
+  return unwrap(await supabase.from('trainers').update(patch as never).eq('id', id).select().single());
+}
+
+// ---- Settings: site content (super-admin) ---------------------------------
+// Upsert one key's JSON blob (hero / facilities / testimonials / faq).
+export async function upsertSiteContent(
+  gymId: string,
+  key: string,
+  content: Record<string, unknown>,
+): Promise<void> {
+  const { error } = await supabase
+    .from('site_content')
+    .upsert(
+      { gym_id: gymId, key, content, updated_at: new Date().toISOString() } as never,
+      { onConflict: 'gym_id,key' },
+    );
+  if (error) throw new Error(error.message);
+}
+
+// ---- Public assets (logos / trainer photos) -------------------------------
+// Uploads to the public `public-assets` bucket and returns the public URL.
+export async function uploadPublicAsset(file: File, prefix: string): Promise<string> {
+  const ext = file.name.split('.').pop() || 'jpg';
+  const path = `${prefix}/${Date.now()}.${ext}`;
+  const { error } = await supabase.storage.from('public-assets').upload(path, file, { upsert: true });
+  if (error) throw new Error(error.message);
+  const { data } = supabase.storage.from('public-assets').getPublicUrl(path);
+  return data.publicUrl;
+}
+
+// ---- Settings: staff (super-admin) ----------------------------------------
+import type { StaffInvite } from './database.types';
+
+export interface StaffMember {
+  id: string;
+  role: string;
+  branch_id: string | null;
+  full_name: string | null;
+  created_at: string;
+}
+
+// Reception + admin profiles in the gym (RLS lets the super-admin read all).
+export async function fetchStaff(): Promise<StaffMember[]> {
+  return unwrap(
+    await supabase
+      .from('profiles')
+      .select('id, role, branch_id, full_name, created_at')
+      .in('role', ['super_admin', 'reception'])
+      .order('created_at', { ascending: true }),
+  ) as unknown as StaffMember[];
+}
+
+export async function fetchStaffInvites(): Promise<StaffInvite[]> {
+  return unwrap(
+    await supabase.from('staff_invites').select('*').order('created_at', { ascending: false }),
+  );
+}
+
+export interface StaffInviteInput {
+  gym_id: string;
+  email: string;
+  full_name: string | null;
+  branch_id: string | null;
+}
+
+export async function createStaffInvite(payload: StaffInviteInput): Promise<StaffInvite> {
+  return unwrap(
+    await supabase
+      .from('staff_invites')
+      .insert({ ...payload, role: 'reception', status: 'pending' } as never)
+      .select()
+      .single(),
+  );
+}
+
+export async function deleteStaffInvite(id: string): Promise<void> {
+  const { error } = await supabase.from('staff_invites').delete().eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
+// Reassign a reception user's branch (super-admin via profiles RLS).
+export async function updateStaffBranch(profileId: string, branchId: string | null): Promise<void> {
+  const { error } = await supabase
+    .from('profiles')
+    .update({ branch_id: branchId } as never)
+    .eq('id', profileId);
+  if (error) throw new Error(error.message);
+}
+
+// Sign up a staff member who was invited by email. The auth trigger promotes
+// them to the invited role/branch. Autoconfirm is on, so a session is active.
+export async function signUpStaff(email: string, password: string): Promise<void> {
+  const { error } = await supabase.auth.signUp({ email, password });
+  if (error) throw new Error(error.message);
+}

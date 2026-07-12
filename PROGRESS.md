@@ -30,7 +30,7 @@ redesigned (editorial-athletic) and deployed to GitHub Pages.
   (Phase 8). Keep building functionality first; don't over-invest in styling before then.
 - **Live Supabase project:** URL `https://hfjyaduiynigylvunnto.supabase.co` (ref
   `hfjyaduiynigylvunnto`, Postgres 17). Schema + RLS + functions + seed are already applied,
-  **migrations through `0009`** (`supabase/apply_all.sql` is the regenerated one-paste bundle).
+  **migrations through `0010`** (`supabase/apply_all.sql` is the regenerated one-paste bundle).
 - **What a new session must get from the user** (nothing secret is committed):
   1. `VITE_SUPABASE_URL` + **anon** key → create a local `.env` (gitignored) so `npm run
      dev/build` hit the live project. The anon key is client-safe (RLS protects data).
@@ -50,6 +50,41 @@ redesigned (editorial-athletic) and deployed to GitHub Pages.
 
 ## Session notes
 <!-- Append a short report after each phase: what was tested, what passed, what was fixed. -->
+
+### Settings — white-label admin (Category 1) (2026-07-12) ✅
+Built the entire **Settings** screen (was a `Placeholder`), super-admin only, as a tabbed page
+(`src/pages/dashboard/settings/`): **Identity · Branches · Staff · Site content**. Completes the
+SPEC's white-label promise — a new gym is now rebrandable from the UI, no SQL needed.
+
+- **Identity** (`IdentitySettings`): edits the `gyms` row — name AR/EN, **logo upload** to the
+  public `public-assets` bucket, primary/secondary colors (native picker + hex), contact
+  email/phone, and social links (instagram/twitter/tiktok/whatsapp). Saves via `updateGym`.
+- **Branches** (`BranchesSettings`): table + add/edit modal — name AR/EN, city, phone, address
+  AR/EN, map link, a 7-day **working-hours** editor, active toggle. `createBranch`/`updateBranch`;
+  reference data reloads after save.
+- **Staff** (`StaffSettings`): lists current staff (reception branch is reassignable inline) and
+  pending invites. **Invite flow avoids putting `service_role` in the browser**: super-admin
+  creates a `staff_invites` row (`0010` migration) and shares a `#/staff-signup?email=…` link; the
+  invited person signs up on the new public **`StaffSignupPage`**, and the extended
+  `handle_new_user()` trigger promotes their profile to `reception` + the invited branch and marks
+  the invite `accepted`.
+- **Site content** (`ContentSettings` + `TrainersSettings`): structured editors for the
+  `site_content` keys the public site reads (**hero** title/subtitle, **facilities**,
+  **testimonials**, **faq** — generic list editor) via `upsertSiteContent`, plus **trainers CRUD**
+  (photo upload, specialty, branch, active). The marketing site is now editable from the dashboard.
+
+**DB:** `0010_staff_invites.sql` applied live (table + RLS `staff_invites_admin_all` + trigger
+update). Features 1/2/4 needed **no new RLS** — `0002` already grants super-admin writes to
+gyms/branches/trainers/site_content.
+
+**Tested (build + live data layer, sandbox browser can't reach Supabase):**
+- `npm run build` passes (tsc strict + vite; 2487 modules).
+- **Identity:** admin PATCH `gyms` succeeds; **reception PATCH blocked** (0 rows, value unchanged); reverted.
+- **Branches / Trainers / Site content:** admin create+update succeed; **reception writes → HTTP 403**; temp rows deleted (seed intact).
+- **Staff invite → promotion:** admin creates invite (`role=reception`, `pending`) → invited email
+  signs up (anon) → **profile auto-promoted to `reception` with the invited `branch_id`** and invite
+  flips to `accepted` (`accepted_user_id` set). **RLS:** reception reads `staff_invites` → 0 rows;
+  reception insert → 403. All test users deleted via the Auth Admin API; 0 leftover rows.
 
 ### Phase 8 — Polish + editorial-athletic redesign (2026-07-11) ✅
 Full UI redesign to an **editorial-athletic** aesthetic (owner-approved), following a strict

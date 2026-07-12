@@ -8,7 +8,6 @@ import { HomePage } from '@/pages/public/HomePage';
 import { PlansPage, BranchesPage, TrainersPage, ContactPage } from '@/pages/public/PublicPages';
 import { JoinPage } from '@/pages/public/JoinPage';
 import { NotFound } from '@/pages/NotFound';
-import { Placeholder } from '@/pages/Placeholder';
 import { DashboardHome } from '@/pages/dashboard/DashboardHome';
 import { MembersList } from '@/pages/dashboard/members/MembersList';
 import { MemberForm } from '@/pages/dashboard/members/MemberForm';
@@ -24,6 +23,8 @@ const Analytics = lazy(() =>
   import('@/pages/dashboard/analytics/Analytics').then((m) => ({ default: m.Analytics })),
 );
 import { ReceiptView } from '@/pages/ReceiptView';
+import { SettingsPage } from '@/pages/dashboard/settings/SettingsPage';
+import { StaffSignupPage } from '@/pages/StaffSignupPage';
 import { PortalHome } from '@/pages/portal/PortalHome';
 import { PortalPayments, PortalCheckins } from '@/pages/portal/PortalHistory';
 import { RequireRole as Guard } from '@/auth/RequireRole';
@@ -43,6 +44,7 @@ export const router = createHashRouter([
   },
 
   { path: '/login', element: <LoginPage /> },
+  { path: '/staff-signup', element: <StaffSignupPage /> },
 
   {
     path: '/receipt/:id',
@@ -86,7 +88,14 @@ export const router = createHashRouter([
           </Guard>
         ),
       },
-      { path: 'settings', element: <Placeholder titleKey="dashboard.settings" /> },
+      {
+        path: 'settings',
+        element: (
+          <Guard allow={['super_admin']}>
+            <SettingsPage />
+          </Guard>
+        ),
+      },
     ],
   },
 
