@@ -13,7 +13,8 @@ import { StatusBadge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { SelectInput } from '@/components/ui/Field';
 import { EmptyState, InlineLoading, PageHeader } from '@/components/ui/misc';
-import { Search, Check, AlertCircle, ArrowRight, ICON, ICON_SM } from '@/components/ui/icons';
+import { QrScanner } from '@/components/QrScanner';
+import { Search, Check, AlertCircle, ArrowRight, QrCode, ICON, ICON_SM } from '@/components/ui/icons';
 
 export function CheckInScreen() {
   const { t, locale } = useI18n();
@@ -28,6 +29,8 @@ export function CheckInScreen() {
   const [branchId, setBranchId] = useState(profile?.branch_id ?? branches[0]?.id ?? '');
   const [result, setResult] = useState<{ memberId: string; ok: boolean; msgKey: string } | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [scanning, setScanning] = useState(false);
+  const [scanMsg, setScanMsg] = useState<string | null>(null);
 
   const effectiveBranch = profile?.role === 'reception' ? profile.branch_id ?? '' : branchId;
 
@@ -49,6 +52,23 @@ export function CheckInScreen() {
     } finally { setBusyId(null); }
   }
 
+  // A scanned QR carries the member_code. Look it up in the RLS-scoped member
+  // list and record the check-in immediately, so a scan reflects in the system
+  // exactly like a manual check-in.
+  function onScan(text: string) {
+    const code = text.trim().toLowerCase();
+    setScanMsg(null);
+    const m = (members.data ?? []).find((x) => (x.member_code ?? '').toLowerCase() === code);
+    setScanning(false);
+    if (!m) {
+      setQuery(text.trim());
+      setScanMsg(t('scan.not_found'));
+      return;
+    }
+    setQuery(m.full_name);
+    doCheckIn(m);
+  }
+
   const branchName = (id: string | null) => { const b = branches.find((x) => x.id === id); return b ? localizedName(b, locale) : '—'; };
 
   return (
@@ -56,12 +76,26 @@ export function CheckInScreen() {
       <PageHeader
         eyebrow={t('checkin.eyebrow')}
         title={t('checkin.title')}
-        action={profile?.role !== 'reception' ? (
-          <SelectInput value={branchId} onChange={(e) => setBranchId(e.target.value)} className="w-auto">
-            {branches.map((b) => <option key={b.id} value={b.id}>{localizedName(b, locale)}</option>)}
-          </SelectInput>
-        ) : undefined}
+        action={
+          <div className="flex items-center gap-2">
+            {profile?.role !== 'reception' && (
+              <SelectInput value={branchId} onChange={(e) => setBranchId(e.target.value)} className="w-auto">
+                {branches.map((b) => <option key={b.id} value={b.id}>{localizedName(b, locale)}</option>)}
+              </SelectInput>
+            )}
+            <Button variant="secondary" onClick={() => { setScanMsg(null); setScanning(true); }} disabled={!effectiveBranch}>
+              <QrCode {...ICON_SM} /> {t('scan.button')}
+            </Button>
+          </div>
+        }
       />
+
+      {scanMsg && (
+        <p className="mb-4 flex items-center gap-2 border-s-2 border-accent bg-surface-2 px-3 py-2 text-sm text-text">
+          <AlertCircle {...ICON_SM} className="text-accent" /> {scanMsg}
+        </p>
+      )}
+      {scanning && <QrScanner onScan={onScan} onClose={() => setScanning(false)} />}
 
       <div className="relative mb-8">
         <Search {...ICON} className="pointer-events-none absolute inset-y-0 my-auto text-faint start-4" />

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { QRCodeSVG } from 'qrcode.react';
 import { useI18n } from '@/i18n/I18nProvider';
 import { useAuth } from '@/auth/AuthProvider';
 import { useReferenceData } from '@/lib/ReferenceData';
@@ -98,6 +99,22 @@ export function PortalHome() {
           )}
         </div>
       </Card>
+
+      {/* Membership QR — reception scans this to check the member in */}
+      {member.data?.member_code && (
+        <Card>
+          <div className="flex items-center gap-5">
+            <div className="shrink-0 rounded bg-white p-2.5">
+              <QRCodeSVG value={member.data.member_code} size={104} bgColor="#ffffff" fgColor="#0d0f12" level="M" />
+            </div>
+            <div>
+              <h2 className="text-sm font-semibold text-muted">{t('portal.qr.title')}</h2>
+              <p className="mt-1 text-sm text-text">{t('portal.qr.hint')}</p>
+              <p dir="ltr" className="font-display mt-2 text-lg tracking-wider text-text">{member.data.member_code}</p>
+            </div>
+          </div>
+        </Card>
+      )}
 
       {/* Notifications */}
       <div>

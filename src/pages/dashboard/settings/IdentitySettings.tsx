@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useI18n } from '@/i18n/I18nProvider';
 import { useReferenceData } from '@/lib/ReferenceData';
+import { useBrand } from '@/lib/Brand';
 import { updateGym, uploadPublicAsset, type GymPatch } from '@/lib/api';
 import { errorMessageKey } from '@/lib/errors';
 import { Button } from '@/components/ui/Button';
@@ -26,6 +27,7 @@ export function IdentitySettings() {
 function IdentityForm({ onReload }: { onReload: () => void }) {
   const { t } = useI18n();
   const { gym } = useReferenceData();
+  const brand = useBrand();
   const g = gym!;
   const [f, setF] = useState({
     name_ar: g.name_ar,
@@ -78,6 +80,7 @@ function IdentityForm({ onReload }: { onReload: () => void }) {
       await updateGym(g.id, patch);
       setSaved(true);
       onReload();
+      brand.reload(); // re-skin logo + accent color app-wide immediately
     } catch (err) {
       setError(t(errorMessageKey(err instanceof Error ? err.message : '')));
     } finally {

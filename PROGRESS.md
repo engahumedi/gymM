@@ -26,9 +26,10 @@ redesigned (editorial-athletic) and deployed to GitHub Pages.
 - **Auth config note:** the public Join flow and staff-invite sign-up need email **autoconfirm
   ON** (enabled on this project via the Management API). For a fresh project, turn off "Confirm
   email" in Auth settings so sign-ups get an immediate session.
-- **Possible next work** (owner-facing suggestions, not started): member QR check-in, real
-  WhatsApp/SMS send (deploy the `notify` Edge Function), cross-branch check-in, `lib/` unit
-  tests, and scheduling `expire_due_subscriptions` on pg_cron.
+- **Possible next work** (owner-facing suggestions, not started): real WhatsApp/SMS send (deploy
+  the `notify` Edge Function), 15% VAT on receipts, cross-branch check-in for all-branch plans,
+  `lib/` unit tests, and scheduling `expire_due_subscriptions` on pg_cron. (Done already: member
+  QR + reception scan check-in, CSV import, password reset, runtime brand colors/logo.)
 - **Live Supabase project:** URL `https://hfjyaduiynigylvunnto.supabase.co` (ref
   `hfjyaduiynigylvunnto`, Postgres 17). Schema + RLS + functions + seed are already applied,
   **migrations through `0010`** (`supabase/apply_all.sql` is the regenerated one-paste bundle).
@@ -51,6 +52,43 @@ redesigned (editorial-athletic) and deployed to GitHub Pages.
 
 ## Session notes
 <!-- Append a short report after each phase: what was tested, what passed, what was fixed. -->
+
+### Brand runtime + CSV import + password reset + member QR check-in (2026-07-12) ✅
+Five owner-requested additions on top of the Settings work:
+
+- **Brand colors + logo applied at runtime** (`src/lib/Brand.tsx` + `components/BrandMark`): a
+  `BrandProvider` at the app root fetches the (anon-readable) `gyms` row, sets the `--accent`
+  design token from `primary_color`, and exposes the gym so every header renders the uploaded
+  **logo** (falling back to the name). Saving Identity settings re-skins the app immediately
+  (`useBrand().reload()`). Closes the white-label loop — the saved color/logo now actually change
+  the UI, not just the DB row.
+- **CSV member import** (`members/MemberImport.tsx`, route `/dashboard/members/import`): upload →
+  client-side `parseCsv` → per-row validation (Saudi phone/ID) → preview table → batch insert via
+  the RLS-scoped `createMember`. Reception imports into their own branch; super-admin picks one.
+  Downloadable template. New `parseCsv` in `lib/csv.ts`.
+- **Password reset** (`ForgotPasswordPage` + `ResetPasswordPage`, routes `/forgot-password`,
+  `/reset-password`; link on login): `resetPasswordForEmail` → recovery link. Because
+  `detectSessionInUrl` is off (hash routing owns the fragment), `consumeRecoveryTokens()` parses
+  the recovery tokens from the second URL fragment, sets the session, then `updateUser` sets the
+  new password. **Requires SMTP configured in Supabase Auth to actually deliver the email.**
+- **Member QR + reception scan check-in**: the member portal shows a QR of their `member_code`
+  (`qrcode.react`, on a white tile so it scans). The reception check-in screen gained a **Scan**
+  button opening a camera scanner (`html5-qrcode`, dynamically imported → its own ~375 KB chunk);
+  a decoded code is matched against the RLS-scoped member list and **checked in via the existing
+  `record_check_in` RPC**, so a scan reflects in the system identically to a manual check-in.
+
+**Tested (build + live data layer):**
+- `npm run build` passes; `html5-qrcode` is code-split (lazy), not in the main bundle.
+- **Scan→check-in reflects live:** as a real reception user, `record_check_in` for `M00002`
+  created a `check_ins` row that appears in the feed (then cleaned up) — this is the exact call the
+  scanner triggers.
+- **CSV import path:** reception insert into own branch succeeds (auto `member_code`); insert into
+  another branch → HTTP 403 (import can't cross branch). Test rows deleted; **seed intact (50
+  members / 2 branches / 4 trainers / 0 invites, no leftovers)**.
+- Brand runtime + QR rendering are client-only (no DB) and verified via build; they render in a
+  real browser / on Pages (the sandbox browser can't reach Supabase).
+
+**New deps:** `qrcode.react` (QR render), `html5-qrcode` (camera scan, lazy-loaded).
 
 ### Settings — white-label admin (Category 1) (2026-07-12) ✅
 Built the entire **Settings** screen (was a `Placeholder`), super-admin only, as a tabbed page

@@ -4,6 +4,7 @@ import { useAuth } from '@/auth/AuthProvider';
 import { roleHome } from '@/auth/roleHome';
 import { LangToggle } from '@/components/LangToggle';
 import { PublicDataProvider } from '@/lib/PublicData';
+import { BrandMark } from '@/components/BrandMark';
 import type { MessageKey } from '@/i18n/dictionary';
 
 const navItems: { to: string; key: MessageKey }[] = [
@@ -21,8 +22,8 @@ export function PublicLayout() {
     <div className="flex min-h-screen flex-col bg-bg text-text">
       <header className="sticky top-0 z-20 border-b border-border bg-bg/85 backdrop-blur">
         <div className="mx-auto flex max-w-content items-center gap-8 px-5 py-4">
-          <Link to="/" className="font-display text-xl tracking-tight">
-            {t('app.name')}
+          <Link to="/" className="tracking-tight">
+            <BrandMark className="text-xl" logoClass="h-8" />
           </Link>
 
           <nav className="hidden items-center gap-7 md:flex">

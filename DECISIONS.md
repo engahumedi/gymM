@@ -269,3 +269,30 @@
   store, but a free-form JSON textarea is easy to corrupt and would break the public site. Instead
   each known key (hero/facilities/testimonials/faq) has typed fields (a reusable list editor for the
   array sections), round-tripping the exact shape the marketing pages read.
+
+## Brand runtime · CSV import · password reset · QR check-in
+
+- **Brand applied at runtime via a root `BrandProvider`, not per-screen.** The saved
+  `primary_color`/`logo_url` were dead data until now. A single provider above the router fetches
+  the anon-readable `gyms` row once, writes `--accent` (the token that drives the accent
+  everywhere), and exposes the gym for the logo — so it also covers login/reset screens that sit
+  outside PublicData/ReferenceData. Only `--accent` is overridden (the real token); the default
+  `secondary_color` (#0f172a navy) is *not* mapped onto the sand accent, which would be wrong.
+- **CSV import is client-side + `createMember`, no new RPC.** Parsing/validation happen in the
+  browser (`parseCsv`), then each valid row inserts through the existing RLS-scoped `createMember`.
+  Reason: RLS already scopes inserts to the caller's branch, so a reception import physically
+  cannot cross branches (verified 403) — no privileged bulk path needed. Rows are inserted
+  sequentially with a per-row success/fail tally rather than one transaction, so one bad row never
+  rolls back the whole file.
+- **Password reset parses recovery tokens manually.** `detectSessionInUrl` stays **off** because
+  hash routing owns the first URL fragment; the recovery link therefore lands with tokens in a
+  *second* `#…` fragment. `consumeRecoveryTokens()` reads that fragment, `setSession`s, and strips
+  it from the URL — avoiding the classic HashRouter⇄Supabase fragment clash without turning
+  detection back on (which would fight the router). **Delivery needs SMTP configured in Supabase
+  Auth**; the code path is provider-agnostic.
+- **Member QR encodes just the `member_code`; the scanner reuses `record_check_in`.** No new
+  check-in path or token scheme — the scanned code is matched against the already-RLS-scoped member
+  list and passed to the same RPC manual check-in uses, so scans and taps are indistinguishable to
+  the system (and equally branch-scoped). `html5-qrcode` is **dynamically imported** so its camera
+  bundle (~375 KB) is a separate chunk loaded only when reception opens the scanner, keeping the
+  main bundle lean (same tactic as Analytics/Recharts).

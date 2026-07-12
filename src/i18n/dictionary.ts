@@ -527,6 +527,50 @@ export const dictionary = {
 
   'err.email_required': { ar: 'أدخل بريداً إلكترونياً صحيحاً.', en: 'Enter a valid email.' },
   'err.no_invite': { ar: 'لا توجد دعوة لهذا البريد. تواصل مع الإدارة.', en: 'No invite for this email. Contact your administrator.' },
+
+  // --- common (additions) ---
+  'common.back': { ar: 'رجوع', en: 'Back' },
+
+  // --- CSV member import ---
+  'import.title': { ar: 'استيراد أعضاء', en: 'Import members' },
+  'import.desc': {
+    ar: 'ارفع ملف CSV بالأعمدة: full_name, phone, national_id, gender, dob, emergency_contact_name, emergency_contact_phone, notes. المطلوب: الاسم والجوال.',
+    en: 'Upload a CSV with columns: full_name, phone, national_id, gender, dob, emergency_contact_name, emergency_contact_phone, notes. Required: name and phone.',
+  },
+  'import.template': { ar: 'تنزيل نموذج CSV', en: 'Download CSV template' },
+  'import.choose_file': { ar: 'اختر ملف CSV', en: 'Choose a CSV file' },
+  'import.summary': { ar: '{valid} من {total} صف جاهز للاستيراد', en: '{valid} of {total} rows ready to import' },
+  'import.run': { ar: 'استيراد {n} عضو', en: 'Import {n} members' },
+  'import.done': { ar: 'تم استيراد {ok}، وفشل {failed}.', en: 'Imported {ok}, failed {failed}.' },
+  'import.go_members': { ar: 'عرض الأعضاء', en: 'View members' },
+  'import.err.empty': { ar: 'الملف فارغ أو بلا صفوف.', en: 'The file is empty or has no rows.' },
+  'import.err.headers': { ar: 'العمودان full_name و phone مطلوبان في صف الترويسة.', en: 'The full_name and phone columns are required in the header row.' },
+  'import.err.parse': { ar: 'تعذّر قراءة الملف. تأكد أنه CSV صالح.', en: 'Could not read the file. Ensure it is valid CSV.' },
+  'import.err.no_name': { ar: 'الاسم مفقود', en: 'Name missing' },
+
+  // --- Password reset ---
+  'forgot.link': { ar: 'نسيت كلمة المرور؟', en: 'Forgot password?' },
+  'forgot.title': { ar: 'استعادة كلمة المرور', en: 'Reset password' },
+  'forgot.desc': { ar: 'أدخل بريدك وسنرسل لك رابط إعادة تعيين كلمة المرور.', en: 'Enter your email and we’ll send you a reset link.' },
+  'forgot.submit': { ar: 'إرسال رابط الاستعادة', en: 'Send reset link' },
+  'forgot.sent': { ar: 'إن كان البريد مسجّلاً، أرسلنا رابط الاستعادة. تحقّق من بريدك.', en: 'If that email exists, we sent a reset link. Check your inbox.' },
+  'forgot.back_login': { ar: 'العودة لتسجيل الدخول', en: 'Back to sign in' },
+  'reset.title': { ar: 'تعيين كلمة مرور جديدة', en: 'Set a new password' },
+  'reset.desc': { ar: 'اختر كلمة مرور جديدة لحسابك (٦ أحرف على الأقل).', en: 'Choose a new password for your account (at least 6 characters).' },
+  'reset.new_password': { ar: 'كلمة المرور الجديدة', en: 'New password' },
+  'reset.submit': { ar: 'حفظ كلمة المرور', en: 'Save password' },
+  'reset.done': { ar: 'تم تحديث كلمة المرور. يتم تحويلك لتسجيل الدخول…', en: 'Password updated. Redirecting to sign in…' },
+  'reset.invalid': { ar: 'رابط الاستعادة غير صالح أو منتهٍ. اطلب رابطاً جديداً.', en: 'The reset link is invalid or expired. Request a new one.' },
+  'reset.err.short': { ar: 'كلمة المرور قصيرة جداً (٦ أحرف على الأقل).', en: 'Password too short (at least 6 characters).' },
+
+  // --- QR check-in ---
+  'portal.qr.title': { ar: 'بطاقة العضوية', en: 'Membership card' },
+  'portal.qr.hint': { ar: 'اعرض هذا الرمز في الاستقبال لتسجيل دخولك بسرعة.', en: 'Show this code at reception for a fast check-in.' },
+  'scan.button': { ar: 'مسح رمز', en: 'Scan QR' },
+  'scan.title': { ar: 'مسح رمز العضو', en: 'Scan member QR' },
+  'scan.hint': { ar: 'وجّه الكاميرا إلى رمز QR في بطاقة العضو.', en: 'Point the camera at the member’s QR code.' },
+  'scan.not_found': { ar: 'لم يُعثر على عضو بهذا الرمز في فرعك.', en: 'No member with that code in your branch.' },
+  'scan.err.camera': { ar: 'تعذّر تشغيل الكاميرا. تحقّق من الأذونات.', en: 'Could not start the camera. Check permissions.' },
 } as const;
 
 export type MessageKey = keyof typeof dictionary;

@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { z } from 'zod';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { useAuth } from '@/auth/AuthProvider';
@@ -77,6 +77,9 @@ export function LoginPage() {
             <Button type="submit" loading={submitting} className="w-full">
               {submitting ? t('auth.signing_in') : t('auth.submit')}
             </Button>
+            <Link to="/forgot-password" className="block text-center text-sm text-muted hover:text-text">
+              {t('forgot.link')}
+            </Link>
           </form>
         </div>
       </div>

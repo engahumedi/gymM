@@ -5,7 +5,7 @@ export {
   Layers, BarChart3, Settings, Bell, ChevronLeft, ChevronRight, X, Check,
   Snowflake, RefreshCw, ArrowUpRight, Printer, Plus, Dumbbell, MapPin,
   Phone, Mail, Menu, AlertCircle, Clock, TrendingUp, Wallet, ClipboardList,
-  ArrowRight, ArrowLeft, Pencil, Download, Instagram, Twitter,
+  ArrowRight, ArrowLeft, Pencil, Download, Instagram, Twitter, QrCode,
 } from 'lucide-react';
 
 export const ICON = { size: 18, strokeWidth: 1.5 } as const;

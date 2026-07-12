@@ -3,6 +3,7 @@ import { useI18n } from '@/i18n/I18nProvider';
 import { useAuth } from '@/auth/AuthProvider';
 import { LangToggle } from '@/components/LangToggle';
 import { ReferenceDataProvider } from '@/lib/ReferenceData';
+import { BrandMark } from '@/components/BrandMark';
 import {
   Users, CalendarClock, CreditCard, Layers, BarChart3, Settings, LayoutHome,
   LogOut, ICON,
@@ -38,7 +39,7 @@ export function DashboardLayout() {
     <div className="flex min-h-screen bg-bg text-text">
       <aside className="hidden w-60 shrink-0 flex-col border-e border-border md:flex">
         <div className="px-5 py-6">
-          <span className="font-display text-xl">{t('app.name')}</span>
+          <BrandMark className="text-xl" logoClass="h-8" />
           <p className="eyebrow mt-1">{role ? t(`role.${role}` as MessageKey) : ''}</p>
         </div>
         <nav className="flex flex-1 flex-col gap-0.5 px-3">
@@ -72,7 +73,7 @@ export function DashboardLayout() {
       <div className="flex min-w-0 flex-1 flex-col">
         {/* Mobile top bar + nav */}
         <header className="flex items-center justify-between border-b border-border px-4 py-3">
-          <span className="font-display text-lg md:hidden">{t('app.name')}</span>
+          <span className="md:hidden"><BrandMark className="text-lg" logoClass="h-7" /></span>
           <div className="flex items-center gap-4 ms-auto">
             <span className="hidden text-sm text-muted sm:inline">{profile?.full_name}</span>
             <LangToggle />
