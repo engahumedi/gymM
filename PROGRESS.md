@@ -17,17 +17,18 @@ redesigned (editorial-athletic) and deployed to GitHub Pages.
 
 ## Handoff — read this first in a new session
 
-- **Repo layout:** `main` contains Phases 1–3 (merged via PR #1, #2). Continue development on
-  branch **`claude/gym-system-bootstrap-mnn1vh`** (it is in sync with `main`). Docs live at the
-  repo root: `SPEC.md`, `CLAUDE.md`, `PROGRESS.md`, `DECISIONS.md`, `README.md`.
-- **Next up: Phase 8** — polish: RTL audit, empty states, loading skeletons, error handling,
-  bundle/code-split cleanup, and verify the live GitHub Pages deployment end-to-end. This is
-  also where the deferred **UI redesign** happens (owner said current UI is rough).
-- **Auth config note:** the public Join flow needs email **autoconfirm ON** (enabled on this
-  project via the Management API). For a fresh project, turn off "Confirm email" in Auth
-  settings so sign-ups get an immediate session.
-- **UI note:** the project owner said the current UI is rough and will be polished later
-  (Phase 8). Keep building functionality first; don't over-invest in styling before then.
+- **Repo layout:** `main` holds the merged history. Continue development on branch
+  **`claude/gym-system-context-setup-h0pqfe`**. Docs live at the repo root: `SPEC.md`,
+  `CLAUDE.md`, `PROGRESS.md`, `DECISIONS.md`, `README.md`.
+- **Status:** all 8 phases + post-launch tweaks + the full **white-label Settings screen**
+  (Identity / Branches / Staff invites / Site content) are done and verified live. The UI
+  redesign (editorial-athletic) already shipped in Phase 8 — no "rough UI" work pending.
+- **Auth config note:** the public Join flow and staff-invite sign-up need email **autoconfirm
+  ON** (enabled on this project via the Management API). For a fresh project, turn off "Confirm
+  email" in Auth settings so sign-ups get an immediate session.
+- **Possible next work** (owner-facing suggestions, not started): member QR check-in, real
+  WhatsApp/SMS send (deploy the `notify` Edge Function), cross-branch check-in, `lib/` unit
+  tests, and scheduling `expire_due_subscriptions` on pg_cron.
 - **Live Supabase project:** URL `https://hfjyaduiynigylvunnto.supabase.co` (ref
   `hfjyaduiynigylvunnto`, Postgres 17). Schema + RLS + functions + seed are already applied,
   **migrations through `0010`** (`supabase/apply_all.sql` is the regenerated one-paste bundle).

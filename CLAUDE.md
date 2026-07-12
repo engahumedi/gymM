@@ -30,15 +30,16 @@ English (LTR) toggle.
 - **All strings via the i18n dictionary — no hardcoded text.** Everything must mirror
   correctly in RTL (layout, tables, charts, icons).
 
-## Current status (2026-07-11)
+## Current status (2026-07-12)
 **All 8 phases done** and verified on the live Supabase project (`hfjyaduiynigylvunnto`);
 deployed to GitHub Pages. UI is redesigned to an **editorial-athletic** system (dark charcoal
 ground, one crimson accent, self-hosted Reem Kufi / Fraunces / IBM Plex Sans Arabic, thin
 lucide icons, hairline-and-whitespace layout — no cards/glow/emoji). Design tokens live in
-`src/index.css` + `tailwind.config.js`. Develop on branch `claude/gym-system-bootstrap-mnn1vh`
-(in sync with `main`). See the **Handoff** section at the top of `PROGRESS.md` for what to
-request from the user (Supabase URL + anon key for `.env`; a `sbp_` PAT to apply migrations
-over HTTPS) and the sandbox networking notes.
+`src/index.css` + `tailwind.config.js`. The **white-label Settings screen** is now fully built
+(Identity / Branches / Staff invites / Site content — see the Settings note in `PROGRESS.md`).
+Develop on branch `claude/gym-system-context-setup-h0pqfe`. See the **Handoff** section at the
+top of `PROGRESS.md` for what to request from the user (Supabase URL + anon key for `.env`; a
+`sbp_` PAT to apply migrations over HTTPS) and the sandbox networking notes.
 
 **Post-launch additions:** national ID on members, member-initiated **freeze requests** with
 reception approval (`freeze_requests`, migration `0009`), rebrand to **أبطال الرياضة**, and a
