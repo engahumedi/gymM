@@ -228,3 +228,18 @@
   check-in heatmap is a custom CSS grid.
 - **`.env.production` retained** for the client-safe keys (Pages build); redesign added no new
   secrets or migrations.
+
+## Post-launch
+
+- **National ID** on members (`0008`): required in the reception + Join forms (Saudi-ID format),
+  nullable in the DB so existing rows are fine; `public_join` gained `p_national_id`.
+- **Freeze-request workflow** (`0009`): kept the freeze *math* in the existing
+  `freeze_subscription` (expiry extended by the days, so paused days aren't lost) and layered a
+  request/approve flow on top via a `freeze_requests` table. Member submits (RPC, capped by
+  allowance, one pending at a time); reception/admin approve → the RPC calls
+  `freeze_subscription` and marks the request approved. All three RPCs are SECURITY DEFINER with
+  explicit role/branch checks; the table exposes read-only RLS (member sees own, staff see their
+  branch). This mirrors the existing pending-subscription pattern rather than adding a new
+  status to `subscriptions`.
+- **Rebrand** to أبطال الرياضة / Sports Champions lives in data (`gyms` row + seed) and the
+  `app.name` dictionary entry.

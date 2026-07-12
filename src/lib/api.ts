@@ -275,6 +275,41 @@ export async function fetchTodayCheckIns(): Promise<CheckInWithMember[]> {
   ) as unknown as CheckInWithMember[];
 }
 
+// ---- Freeze requests (member → reception approval) -----------------------
+import type { FreezeRequest } from './database.types';
+
+export async function requestFreeze(subscriptionId: string, days: number, note: string | null): Promise<FreezeRequest> {
+  return rpcCall<FreezeRequest>('request_freeze', { p_subscription_id: subscriptionId, p_days: days, p_note: note });
+}
+
+export async function fetchMyFreezeRequests(): Promise<FreezeRequest[]> {
+  return unwrap(
+    await supabase.from('freeze_requests').select('*').order('created_at', { ascending: false }).limit(20),
+  );
+}
+
+export interface FreezeRequestWithMember extends FreezeRequest {
+  members: { full_name: string; member_code: string | null } | null;
+}
+
+export async function fetchPendingFreezeRequests(): Promise<FreezeRequestWithMember[]> {
+  return unwrap(
+    await supabase
+      .from('freeze_requests')
+      .select('*, members(full_name, member_code)')
+      .eq('status', 'pending')
+      .order('created_at', { ascending: true }),
+  ) as unknown as FreezeRequestWithMember[];
+}
+
+export async function approveFreezeRequest(id: string): Promise<FreezeRequest> {
+  return rpcCall<FreezeRequest>('approve_freeze_request', { p_request_id: id });
+}
+
+export async function rejectFreezeRequest(id: string): Promise<FreezeRequest> {
+  return rpcCall<FreezeRequest>('reject_freeze_request', { p_request_id: id });
+}
+
 // ---- Public site content (Phase 7) ---------------------------------------
 import type { Notification, Trainer, SiteContent, Gender } from './database.types';
 

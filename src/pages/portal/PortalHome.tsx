@@ -6,8 +6,10 @@ import {
   fetchMember,
   fetchMyNotifications,
   fetchSubscriptions,
+  fetchMyFreezeRequests,
   markNotificationRead,
   requestRenewal,
+  requestFreeze,
 } from '@/lib/api';
 import { useAsync } from '@/lib/useAsync';
 import { localizedName } from '@/lib/display';
@@ -17,7 +19,7 @@ import { errorMessageKey } from '@/lib/errors';
 import { StatusBadge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
-import { SelectInput, Field } from '@/components/ui/Field';
+import { SelectInput, Field, TextInput, TextArea } from '@/components/ui/Field';
 import { Card, EmptyState, InlineLoading, ErrorText, DaysLeft } from '@/components/ui/misc';
 import { daysUntil } from '@/lib/format';
 
@@ -30,12 +32,15 @@ export function PortalHome() {
   const member = useAsync(() => (memberId ? fetchMember(memberId) : Promise.resolve(null)), [memberId]);
   const subs = useAsync(() => (memberId ? fetchSubscriptions(memberId) : Promise.resolve([])), [memberId]);
   const notifs = useAsync(fetchMyNotifications, []);
+  const freezeReqs = useAsync(fetchMyFreezeRequests, []);
 
   const [asking, setAsking] = useState(false);
+  const [freezing, setFreezing] = useState(false);
 
   const current = pickCurrent(subs.data ?? []);
   const status = subscriptionDisplayStatus(current);
   const hasPending = (subs.data ?? []).some((s) => s.status === 'pending');
+  const pendingFreeze = (freezeReqs.data ?? []).find((r) => r.status === 'pending');
   const planName = (id: string) => localizedName(plans.find((p) => p.id === id), locale);
 
   if (member.loading || subs.loading) return <InlineLoading />;
@@ -76,11 +81,21 @@ export function PortalHome() {
             {t('portal.pending_note')}
           </p>
         )}
+        {pendingFreeze && (
+          <p className="mt-3 border-s-2 border-sand bg-surface-2 px-3 py-2 text-sm text-text">
+            {t('freezereq.pending_note').replace('{n}', String(pendingFreeze.days))}
+          </p>
+        )}
 
-        <div className="mt-4">
+        <div className="mt-5 flex flex-wrap items-center gap-3">
           <Button onClick={() => setAsking(true)} disabled={hasPending}>
             {t('portal.request_renewal')}
           </Button>
+          {current?.status === 'active' && (
+            <Button variant="secondary" onClick={() => setFreezing(true)} disabled={Boolean(pendingFreeze)}>
+              {t('freezereq.request')}
+            </Button>
+          )}
         </div>
       </Card>
 
@@ -127,7 +142,69 @@ export function PortalHome() {
           }}
         />
       )}
+
+      {freezing && current && (
+        <FreezeRequest
+          subscriptionId={current.id}
+          allowanceLeft={(plans.find((p) => p.id === current.plan_id)?.freeze_allowance_days ?? 0) - current.frozen_days_used}
+          onClose={() => setFreezing(false)}
+          onDone={() => { setFreezing(false); freezeReqs.reload(); }}
+        />
+      )}
     </div>
+  );
+}
+
+function FreezeRequest({
+  subscriptionId,
+  allowanceLeft,
+  onClose,
+  onDone,
+}: {
+  subscriptionId: string;
+  allowanceLeft: number;
+  onClose: () => void;
+  onDone: () => void;
+}) {
+  const { t } = useI18n();
+  const [days, setDays] = useState('');
+  const [note, setNote] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [done, setDone] = useState(false);
+
+  async function submit() {
+    setBusy(true); setError(null);
+    try { await requestFreeze(subscriptionId, Number(days), note || null); setDone(true); }
+    catch (err) { setError(t(errorMessageKey(err instanceof Error ? err.message : ''))); }
+    finally { setBusy(false); }
+  }
+
+  return (
+    <Modal open onClose={onClose} title={t('freezereq.title')}>
+      {done ? (
+        <div className="space-y-4">
+          <p className="border-s-2 border-good bg-surface-2 px-3 py-2 text-sm text-text">{t('freezereq.sent')}</p>
+          <Button onClick={onDone}>{t('common.save')}</Button>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          <p className="text-sm text-muted">{t('freezereq.hint')}</p>
+          <Field label={t('freezereq.days')} required>
+            <TextInput type="number" min={1} max={Math.max(1, allowanceLeft)} value={days} onChange={(e) => setDays(e.target.value)} />
+            <span className="mt-1 block text-xs text-faint">{t('plans.col.freeze')}: {Math.max(0, allowanceLeft)} {t('freezereq.days_short')}</span>
+          </Field>
+          <Field label={t('freezereq.note')}>
+            <TextArea rows={2} value={note} onChange={(e) => setNote(e.target.value)} />
+          </Field>
+          <ErrorText error={error} />
+          <div className="flex gap-2">
+            <Button onClick={submit} loading={busy} disabled={days === '' || Number(days) < 1}>{t('freezereq.submit')}</Button>
+            <Button variant="secondary" onClick={onClose}>{t('common.cancel')}</Button>
+          </div>
+        </div>
+      )}
+    </Modal>
   );
 }
 
