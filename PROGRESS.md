@@ -27,13 +27,14 @@ redesigned (editorial-athletic) and deployed to GitHub Pages.
   ON** (enabled on this project via the Management API). For a fresh project, turn off "Confirm
   email" in Auth settings so sign-ups get an immediate session.
 - **Possible next work** (owner-facing suggestions, not started): real WhatsApp/SMS send (deploy
-  the `notify` Edge Function), 15% VAT on receipts, cross-branch check-in for all-branch plans,
-  `lib/` unit tests, and scheduling `expire_due_subscriptions` on pg_cron. (Done already: white-label
-  Settings, runtime brand colors/logo, CSV member import, member QR + reception scan check-in, and
-  password reset by request→staff approval — no email/SMTP.)
+  the `notify` Edge Function), 15% VAT on receipts, cross-branch check-in for all-branch plans, and
+  captcha on the public forms (needs a provider key). (Done already: white-label Settings, runtime
+  brand colors/logo, CSV member import, member QR + reception scan check-in, password reset by
+  request→staff approval, staff-set password, printable membership card, audit log, pg_cron expiry
+  job, and Vitest unit tests for `lib/`.)
 - **Live Supabase project:** URL `https://hfjyaduiynigylvunnto.supabase.co` (ref
   `hfjyaduiynigylvunnto`, Postgres 17). Schema + RLS + functions + seed are already applied,
-  **migrations through `0011`** (`supabase/apply_all.sql` is the regenerated one-paste bundle).
+  **migrations through `0013`** (`supabase/apply_all.sql` is the regenerated one-paste bundle).
 - **What a new session must get from the user** (nothing secret is committed):
   1. `VITE_SUPABASE_URL` + **anon** key → create a local `.env` (gitignored) so `npm run
      dev/build` hit the live project. The anon key is client-safe (RLS protects data).
@@ -53,6 +54,32 @@ redesigned (editorial-athletic) and deployed to GitHub Pages.
 
 ## Session notes
 <!-- Append a short report after each phase: what was tested, what passed, what was fixed. -->
+
+### Hardening + staff password reset + card + audit + cron + tests (2026-07-13) ✅
+Six additions (`0012`, `0013` migrations):
+
+- **Password-request rate limit** (`0012`): `request_password_change` now caps at 5/user/24h on top
+  of the one-pending dedup. (Captcha on the public forms still needs a provider key — noted, not wired.)
+- **Staff-set member password** (`staff_set_member_password`): reception (own branch) / super-admin
+  (gym) sets a member's password on the spot from the member profile — writes a bcrypt hash to
+  `auth.users`, audited. UI: "Set password" button + modal on `MemberProfile`.
+- **Printable membership card** (`/card/:id`, `MembershipCard`): brand logo + name + `member_code`
+  + QR on a light card, print-friendly; opened from the portal QR card and the member profile.
+- **pg_cron** (`0013`): `expire_due_subscriptions` scheduled daily (`5 0 * * *`) so lapsed subs
+  flip to `expired` in the DB, not just in the derived UI status.
+- **Audit log** (`0012`): `audit_log` + `record_audit()` + triggers on `payments` (insert) and
+  `subscriptions` (status change) + explicit logging in the credential RPCs. Super-admin-only read,
+  surfaced as a **Settings → Activity** tab.
+- **Vitest** (`npm test`): unit tests for `phone`, `subscriptionStatus`, `csv`, `analytics`
+  (28 tests). **Caught a real bug**: `normalizeSaudiPhone` sliced the wrong offset for `+9665`/`9665`
+  inputs (`966501234567` → `06501234567`); fixed to produce `0501234567`. Never hit in practice
+  because forms submit the local `05…` form, but a genuine defect now covered.
+
+**Tested (live data layer):** staff-set password → member signs in with it (204 + login OK);
+rate-limit → `rate_limited` on the 6th/24h; payment + `password_set_by_staff` land in `audit_log`
+with the actor name; **reception is blocked from reading `audit_log`** (0 rows); cron job present
+(`expire-subscriptions-daily @ 5 0 * * *`). All test rows removed; seed intact. `npm run build`
+passes; `npm test` green (28/28).
 
 ### Password reset reworked: request → staff approval (no SMTP) (2026-07-13) ✅
 Replaced the email/SMTP password recovery with a **request→approval** flow (owner's idea; fits a

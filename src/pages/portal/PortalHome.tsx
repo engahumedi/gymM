@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
 import { useI18n } from '@/i18n/I18nProvider';
 import { useAuth } from '@/auth/AuthProvider';
@@ -111,6 +112,9 @@ export function PortalHome() {
               <h2 className="text-sm font-semibold text-muted">{t('portal.qr.title')}</h2>
               <p className="mt-1 text-sm text-text">{t('portal.qr.hint')}</p>
               <p dir="ltr" className="font-display mt-2 text-lg tracking-wider text-text">{member.data.member_code}</p>
+              <Link to={`/card/${member.data.id}`} className="mt-2 inline-block text-sm font-semibold text-accent hover:underline">
+                {t('portal.qr.card')}
+              </Link>
             </div>
           </div>
         </Card>

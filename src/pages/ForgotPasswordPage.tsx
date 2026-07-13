@@ -22,6 +22,7 @@ function errorKey(raw: string): MessageKey {
   if (m.includes('user_not_found')) return 'pwreq.err.no_user';
   if (m.includes('weak_password')) return 'reset.err.short';
   if (m.includes('request_exists')) return 'pwreq.err.exists';
+  if (m.includes('rate_limited')) return 'pwreq.err.rate';
   return 'err.generic';
 }
 

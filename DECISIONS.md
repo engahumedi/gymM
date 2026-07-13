@@ -310,3 +310,27 @@
   stores `requested_name`/email to help. The new password is stored only as a bcrypt hash in a
   staff-read-only table and is never selected by the client (RPC returns blank it). SMTP that was
   briefly configured for the earlier email flow was removed (provider key cleared from the project).
+
+## Hardening, staff reset, card, audit, cron, tests (0012–0013)
+
+- **Rate limit lives in the RPC, not the client.** `request_password_change` caps at 5/user/24h
+  server-side (the only place it can't be bypassed). Captcha would add bot resistance but needs a
+  provider account/secret, so it's left as a documented follow-up rather than half-wired.
+- **`staff_set_member_password` reuses the same bcrypt-into-`auth.users` mechanism** as the approval
+  flow (validated in 0011/0012) — a SECURITY DEFINER function, branch/gym-scoped, audited. Lets
+  reception fix a member who's standing at the desk without the request round-trip.
+- **Audit via triggers where possible, explicit calls where not.** Money/lifecycle events
+  (`payments` insert, `subscriptions` status change) are captured by AFTER triggers so the RPC layer
+  didn't have to be rewritten; `auth.uid()` still resolves the real actor inside a SECURITY DEFINER
+  context, so the log attributes correctly. Credential actions (password approve/reject/set) call
+  `record_audit` explicitly. Writes bypass RLS via the definer helper; reads are super-admin-only.
+- **Membership card is a top-level print route** (`/card/:id`) like the receipt — no dashboard/portal
+  chrome so `window.print()` yields just the card; `members` RLS decides who can load which id
+  (member sees own, staff see their scope), so one route serves both.
+- **Expiry is now a scheduled job, not only derived.** `subscriptionDisplayStatus()` already shows
+  "expired" from the date, but reports read the stored status, so `expire_due_subscriptions()` is
+  scheduled on pg_cron (`0013`) to flip rows for real. Kept the derived display too (instant, no
+  wait for the job).
+- **Unit tests target pure `lib/` logic** (`phone`, `subscriptionStatus`, `csv`, `analytics`) with
+  Vitest reusing the Vite config's `@` alias — no DOM/network, fast, deterministic. They immediately
+  paid for themselves by surfacing the `normalizeSaudiPhone` slice bug, fixed in source.

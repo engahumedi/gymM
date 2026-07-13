@@ -205,6 +205,18 @@ export interface PasswordChangeRequest {
   decided_by: string | null;
 }
 
+export interface AuditEntry {
+  id: number;
+  gym_id: string | null;
+  actor: string | null;
+  actor_name: string | null;
+  action: string;
+  entity: string | null;
+  entity_id: string | null;
+  meta: Record<string, unknown>;
+  created_at: string;
+}
+
 export type StaffInviteStatus = 'pending' | 'accepted';
 
 export interface StaffInvite {
@@ -241,6 +253,7 @@ export interface Database {
       freeze_requests: Row<FreezeRequest>;
       staff_invites: Row<StaffInvite>;
       password_change_requests: Row<PasswordChangeRequest>;
+      audit_log: Row<AuditEntry>;
     };
     Views: Record<string, never>;
     Functions: {

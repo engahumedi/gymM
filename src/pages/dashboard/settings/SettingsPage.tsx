@@ -6,14 +6,16 @@ import { IdentitySettings } from './IdentitySettings';
 import { BranchesSettings } from './BranchesSettings';
 import { StaffSettings } from './StaffSettings';
 import { ContentSettings } from './ContentSettings';
+import { AuditSettings } from './AuditSettings';
 
-type Tab = 'identity' | 'branches' | 'staff' | 'content';
+type Tab = 'identity' | 'branches' | 'staff' | 'content' | 'audit';
 
 const TABS: { id: Tab; key: MessageKey }[] = [
   { id: 'identity', key: 'settings.tab.identity' },
   { id: 'branches', key: 'settings.tab.branches' },
   { id: 'staff', key: 'settings.tab.staff' },
   { id: 'content', key: 'settings.tab.content' },
+  { id: 'audit', key: 'settings.tab.audit' },
 ];
 
 export function SettingsPage() {
@@ -44,6 +46,7 @@ export function SettingsPage() {
       {tab === 'branches' && <BranchesSettings />}
       {tab === 'staff' && <StaffSettings />}
       {tab === 'content' && <ContentSettings />}
+      {tab === 'audit' && <AuditSettings />}
     </div>
   );
 }

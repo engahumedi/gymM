@@ -602,3 +602,21 @@ export async function approvePasswordChange(id: string): Promise<PasswordChangeR
 export async function rejectPasswordChange(id: string): Promise<PasswordChangeRequest> {
   return rpcCall<PasswordChangeRequest>('reject_password_change', { p_request_id: id });
 }
+
+// Staff resets a member's password on the spot (member present at the desk).
+export async function staffSetMemberPassword(memberId: string, newPassword: string): Promise<void> {
+  await rpcCall<void>('staff_set_member_password', { p_member_id: memberId, p_new_password: newPassword });
+}
+
+// ---- Audit log (super-admin) ----------------------------------------------
+import type { AuditEntry } from './database.types';
+
+export async function fetchAuditLog(limit = 100): Promise<AuditEntry[]> {
+  return unwrap(
+    await supabase
+      .from('audit_log')
+      .select('id, actor_name, action, entity, entity_id, meta, created_at')
+      .order('created_at', { ascending: false })
+      .limit(limit),
+  ) as unknown as AuditEntry[];
+}

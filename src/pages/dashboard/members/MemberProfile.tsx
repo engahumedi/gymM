@@ -4,17 +4,20 @@ import { useI18n } from '@/i18n/I18nProvider';
 import { useReferenceData } from '@/lib/ReferenceData';
 import {
   fetchCheckIns, fetchFreezes, fetchMember, fetchPayments, fetchSubscriptions,
-  signedPhotoUrl, unfreezeSubscription,
+  signedPhotoUrl, unfreezeSubscription, staffSetMemberPassword,
 } from '@/lib/api';
 import { useAsync } from '@/lib/useAsync';
 import { localizedName, methodLabelKey } from '@/lib/display';
 import { formatCurrency, formatDate, formatDateTime } from '@/lib/format';
 import { pickCurrent, subscriptionDisplayStatus } from '@/lib/subscriptionStatus';
+import { errorMessageKey } from '@/lib/errors';
 import type { Plan, Subscription } from '@/lib/database.types';
 import { StatusBadge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
+import { Modal } from '@/components/ui/Modal';
+import { Field, TextInput } from '@/components/ui/Field';
 import { EmptyState, ErrorText, InlineLoading, PageHeader } from '@/components/ui/misc';
-import { ChevronRight, Pencil, RefreshCw, Snowflake, ArrowUpRight, Check, ICON_SM } from '@/components/ui/icons';
+import { ChevronRight, Pencil, RefreshCw, Snowflake, ArrowUpRight, Check, QrCode, KeyRound, ICON_SM } from '@/components/ui/icons';
 import { SubscriptionActionModal, type SubAction } from './SubscriptionActionModal';
 import type { MessageKey } from '@/i18n/dictionary';
 
@@ -36,6 +39,7 @@ export function MemberProfile() {
   const [tab, setTab] = useState<Tab>('subscriptions');
   const [action, setAction] = useState<SubAction | null>(null);
   const [busy, setBusy] = useState(false);
+  const [pwOpen, setPwOpen] = useState(false);
 
   const planName = (planId: string) => localizedName(plans.find((p) => p.id === planId) as Plan, locale);
   const branchName = (bid: string | null) => { const b = branches.find((x) => x.id === bid); return b ? localizedName(b, locale) : '—'; };
@@ -63,7 +67,15 @@ export function MemberProfile() {
       <PageHeader
         eyebrow={m.member_code ?? undefined}
         title={m.full_name}
-        action={<Button variant="secondary" onClick={() => navigate(`/dashboard/members/${m.id}/edit`)}><Pencil {...ICON_SM} />{t('profile.edit')}</Button>}
+        action={
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <Button variant="secondary" onClick={() => navigate(`/card/${m.id}`)}><QrCode {...ICON_SM} />{t('profile.card')}</Button>
+            {m.user_id && (
+              <Button variant="secondary" onClick={() => setPwOpen(true)}><KeyRound {...ICON_SM} />{t('profile.set_password')}</Button>
+            )}
+            <Button variant="secondary" onClick={() => navigate(`/dashboard/members/${m.id}/edit`)}><Pencil {...ICON_SM} />{t('profile.edit')}</Button>
+          </div>
+        }
       />
 
       {/* Identity row */}
@@ -150,7 +162,53 @@ export function MemberProfile() {
       {action && (
         <SubscriptionActionModal action={action} member={m} subscription={current} onClose={() => setAction(null)} onDone={reloadAll} />
       )}
+      {pwOpen && <StaffPasswordModal memberId={m.id} onClose={() => setPwOpen(false)} />}
     </div>
+  );
+}
+
+function StaffPasswordModal({ memberId, onClose }: { memberId: string; onClose: () => void }) {
+  const { t } = useI18n();
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [done, setDone] = useState(false);
+
+  async function submit() {
+    setError(null);
+    if (password.length < 6) return setError(t('reset.err.short'));
+    setBusy(true);
+    try {
+      await staffSetMemberPassword(memberId, password);
+      setDone(true);
+    } catch (err) {
+      setError(t(errorMessageKey(err instanceof Error ? err.message : '')));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Modal open onClose={onClose} title={t('profile.set_password')}>
+      {done ? (
+        <div className="space-y-4">
+          <p className="border-s-2 border-good bg-surface-2 px-3 py-2 text-sm text-text">{t('profile.pw_done')}</p>
+          <Button onClick={onClose}>{t('common.close')}</Button>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          <p className="text-sm text-muted">{t('profile.pw_hint')}</p>
+          <Field label={t('pwreq.new_password')} required>
+            <TextInput type="text" dir="ltr" value={password} onChange={(e) => setPassword(e.target.value)} autoFocus />
+          </Field>
+          <ErrorText error={error} />
+          <div className="flex gap-2">
+            <Button onClick={submit} loading={busy}>{t('common.save')}</Button>
+            <Button variant="secondary" onClick={onClose}>{t('common.cancel')}</Button>
+          </div>
+        </div>
+      )}
+    </Modal>
   );
 }
 

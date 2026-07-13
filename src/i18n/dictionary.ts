@@ -578,6 +578,38 @@ export const dictionary = {
   'scan.hint': { ar: 'وجّه الكاميرا إلى رمز QR في بطاقة العضو.', en: 'Point the camera at the member’s QR code.' },
   'scan.not_found': { ar: 'لم يُعثر على عضو بهذا الرمز في فرعك.', en: 'No member with that code in your branch.' },
   'scan.err.camera': { ar: 'تعذّر تشغيل الكاميرا. تحقّق من الأذونات.', en: 'Could not start the camera. Check permissions.' },
+
+  // --- Staff-set password + membership card ---
+  'pwreq.err.rate': { ar: 'طلبات كثيرة. حاول لاحقاً.', en: 'Too many requests. Try again later.' },
+  'profile.card': { ar: 'بطاقة العضوية', en: 'Membership card' },
+  'profile.set_password': { ar: 'تعيين كلمة مرور', en: 'Set password' },
+  'profile.pw_hint': { ar: 'اكتب كلمة مرور جديدة للعضو (٦ أحرف على الأقل) وسلّمها له.', en: 'Type a new password for the member (min 6 chars) and hand it over.' },
+  'profile.pw_done': { ar: 'تم تعيين كلمة المرور. سلّمها للعضو.', en: 'Password set. Give it to the member.' },
+  'portal.qr.card': { ar: 'عرض/طباعة البطاقة', en: 'View / print card' },
+  'card.title': { ar: 'بطاقة عضوية', en: 'Membership card' },
+  'card.member': { ar: 'العضو', en: 'Member' },
+  'card.code': { ar: 'رقم العضوية', en: 'Member code' },
+  'card.hint': { ar: 'اعرض هذا الرمز في الاستقبال لتسجيل الدخول.', en: 'Show this code at reception to check in.' },
+  'card.print': { ar: 'طباعة', en: 'Print' },
+
+  // --- Audit log ---
+  'settings.tab.audit': { ar: 'السجل', en: 'Activity' },
+  'audit.desc': { ar: 'سجلّ بأهم العمليات: من فعل ماذا ومتى.', en: 'A log of key actions: who did what, and when.' },
+  'audit.empty': { ar: 'لا يوجد نشاط بعد.', en: 'No activity yet.' },
+  'audit.col.time': { ar: 'الوقت', en: 'Time' },
+  'audit.col.actor': { ar: 'المستخدم', en: 'User' },
+  'audit.col.action': { ar: 'العملية', en: 'Action' },
+  'audit.col.detail': { ar: 'التفاصيل', en: 'Detail' },
+  'audit.action.payment_recorded': { ar: 'تسجيل دفعة', en: 'Payment recorded' },
+  'audit.action.password_set_by_staff': { ar: 'تعيين كلمة مرور عضو', en: 'Member password set' },
+  'audit.action.password_change_requested': { ar: 'طلب تغيير كلمة مرور', en: 'Password change requested' },
+  'audit.action.password_change_approved': { ar: 'الموافقة على تغيير كلمة المرور', en: 'Password change approved' },
+  'audit.action.password_change_rejected': { ar: 'رفض تغيير كلمة المرور', en: 'Password change rejected' },
+  'audit.action.subscription_active': { ar: 'تفعيل اشتراك', en: 'Subscription activated' },
+  'audit.action.subscription_frozen': { ar: 'تجميد اشتراك', en: 'Subscription frozen' },
+  'audit.action.subscription_expired': { ar: 'انتهاء اشتراك', en: 'Subscription expired' },
+  'audit.action.subscription_cancelled': { ar: 'إلغاء اشتراك', en: 'Subscription cancelled' },
+  'audit.action.subscription_pending': { ar: 'اشتراك معلّق', en: 'Subscription pending' },
 } as const;
 
 export type MessageKey = keyof typeof dictionary;

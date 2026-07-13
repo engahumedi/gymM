@@ -24,6 +24,7 @@ const Analytics = lazy(() =>
   import('@/pages/dashboard/analytics/Analytics').then((m) => ({ default: m.Analytics })),
 );
 import { ReceiptView } from '@/pages/ReceiptView';
+import { MembershipCard } from '@/pages/MembershipCard';
 import { SettingsPage } from '@/pages/dashboard/settings/SettingsPage';
 import { StaffSignupPage } from '@/pages/StaffSignupPage';
 import { ForgotPasswordPage } from '@/pages/ForgotPasswordPage';
@@ -54,6 +55,15 @@ export const router = createHashRouter([
     element: (
       <Guard allow={['super_admin', 'reception']}>
         <ReceiptView />
+      </Guard>
+    ),
+  },
+
+  {
+    path: '/card/:id',
+    element: (
+      <Guard allow={['super_admin', 'reception', 'member']}>
+        <MembershipCard />
       </Guard>
     ),
   },

@@ -48,8 +48,12 @@ invites `0010`, site-content/trainers editors). **Latest batch:** runtime brandi
 `primary_color` → `--accent` + logo shown app-wide), **CSV member import**, **member QR + reception
 camera scan check-in** (`qrcode.react` / `html5-qrcode`), and **password reset by request→staff
 approval** (`password_change_requests`, migration `0011` — no email/SMTP; approve writes a bcrypt
-hash to `auth.users`). DB migrations run through `0011` (all applied live; `supabase/apply_all.sql`
-is the one-paste bundle).
+hash to `auth.users`). **Latest:** staff can reset a member's password on the spot
+(`staff_set_member_password`), the password-request RPC is rate-limited, a **printable membership
+card** at `/card/:id`, an **audit log** (`audit_log` + triggers + a Settings → Activity viewer),
+`expire_due_subscriptions` scheduled on **pg_cron**, and **Vitest** unit tests for `src/lib/`
+(caught + fixed a real `normalizeSaudiPhone` bug). DB migrations run through `0013` (all applied
+live; `supabase/apply_all.sql` is the one-paste bundle). Run tests with `npm test`.
 
 ## Pointer
 Full requirements live in **SPEC.md** — read the relevant section before starting any phase.
