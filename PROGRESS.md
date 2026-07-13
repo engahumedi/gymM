@@ -17,20 +17,24 @@ redesigned (editorial-athletic) and deployed to GitHub Pages.
 
 ## Handoff — read this first in a new session
 
-- **Repo layout:** `main` contains Phases 1–3 (merged via PR #1, #2). Continue development on
-  branch **`claude/gym-system-bootstrap-mnn1vh`** (it is in sync with `main`). Docs live at the
-  repo root: `SPEC.md`, `CLAUDE.md`, `PROGRESS.md`, `DECISIONS.md`, `README.md`.
-- **Next up: Phase 8** — polish: RTL audit, empty states, loading skeletons, error handling,
-  bundle/code-split cleanup, and verify the live GitHub Pages deployment end-to-end. This is
-  also where the deferred **UI redesign** happens (owner said current UI is rough).
-- **Auth config note:** the public Join flow needs email **autoconfirm ON** (enabled on this
-  project via the Management API). For a fresh project, turn off "Confirm email" in Auth
-  settings so sign-ups get an immediate session.
-- **UI note:** the project owner said the current UI is rough and will be polished later
-  (Phase 8). Keep building functionality first; don't over-invest in styling before then.
+- **Repo layout:** `main` holds the merged history. Continue development on branch
+  **`claude/gym-system-context-setup-h0pqfe`**. Docs live at the repo root: `SPEC.md`,
+  `CLAUDE.md`, `PROGRESS.md`, `DECISIONS.md`, `README.md`.
+- **Status:** all 8 phases + post-launch tweaks + the full **white-label Settings screen**
+  (Identity / Branches / Staff invites / Site content) are done and verified live. The UI
+  redesign (editorial-athletic) already shipped in Phase 8 — no "rough UI" work pending.
+- **Auth config note:** the public Join flow and staff-invite sign-up need email **autoconfirm
+  ON** (enabled on this project via the Management API). For a fresh project, turn off "Confirm
+  email" in Auth settings so sign-ups get an immediate session.
+- **Possible next work** (owner-facing suggestions, not started): real WhatsApp/SMS send (deploy
+  the `notify` Edge Function), 15% VAT on receipts, cross-branch check-in for all-branch plans, and
+  captcha on the public forms (needs a provider key). (Done already: white-label Settings, runtime
+  brand colors/logo, CSV member import, member QR + reception scan check-in, password reset by
+  request→staff approval, staff-set password, printable membership card, audit log, pg_cron expiry
+  job, and Vitest unit tests for `lib/`.)
 - **Live Supabase project:** URL `https://hfjyaduiynigylvunnto.supabase.co` (ref
   `hfjyaduiynigylvunnto`, Postgres 17). Schema + RLS + functions + seed are already applied,
-  **migrations through `0009`** (`supabase/apply_all.sql` is the regenerated one-paste bundle).
+  **migrations through `0013`** (`supabase/apply_all.sql` is the regenerated one-paste bundle).
 - **What a new session must get from the user** (nothing secret is committed):
   1. `VITE_SUPABASE_URL` + **anon** key → create a local `.env` (gitignored) so `npm run
      dev/build` hit the live project. The anon key is client-safe (RLS protects data).
@@ -50,6 +54,135 @@ redesigned (editorial-athletic) and deployed to GitHub Pages.
 
 ## Session notes
 <!-- Append a short report after each phase: what was tested, what passed, what was fixed. -->
+
+### Hardening + staff password reset + card + audit + cron + tests (2026-07-13) ✅
+Six additions (`0012`, `0013` migrations):
+
+- **Password-request rate limit** (`0012`): `request_password_change` now caps at 5/user/24h on top
+  of the one-pending dedup. (Captcha on the public forms still needs a provider key — noted, not wired.)
+- **Staff-set member password** (`staff_set_member_password`): reception (own branch) / super-admin
+  (gym) sets a member's password on the spot from the member profile — writes a bcrypt hash to
+  `auth.users`, audited. UI: "Set password" button + modal on `MemberProfile`.
+- **Printable membership card** (`/card/:id`, `MembershipCard`): brand logo + name + `member_code`
+  + QR on a light card, print-friendly; opened from the portal QR card and the member profile.
+- **pg_cron** (`0013`): `expire_due_subscriptions` scheduled daily (`5 0 * * *`) so lapsed subs
+  flip to `expired` in the DB, not just in the derived UI status.
+- **Audit log** (`0012`): `audit_log` + `record_audit()` + triggers on `payments` (insert) and
+  `subscriptions` (status change) + explicit logging in the credential RPCs. Super-admin-only read,
+  surfaced as a **Settings → Activity** tab.
+- **Vitest** (`npm test`): unit tests for `phone`, `subscriptionStatus`, `csv`, `analytics`
+  (28 tests). **Caught a real bug**: `normalizeSaudiPhone` sliced the wrong offset for `+9665`/`9665`
+  inputs (`966501234567` → `06501234567`); fixed to produce `0501234567`. Never hit in practice
+  because forms submit the local `05…` form, but a genuine defect now covered.
+
+**Tested (live data layer):** staff-set password → member signs in with it (204 + login OK);
+rate-limit → `rate_limited` on the 6th/24h; payment + `password_set_by_staff` land in `audit_log`
+with the actor name; **reception is blocked from reading `audit_log`** (0 rows); cron job present
+(`expire-subscriptions-daily @ 5 0 * * *`). All test rows removed; seed intact. `npm run build`
+passes; `npm test` green (28/28).
+
+### Password reset reworked: request → staff approval (no SMTP) (2026-07-13) ✅
+Replaced the email/SMTP password recovery with a **request→approval** flow (owner's idea; fits a
+gym where staff verify members in person), mirroring the freeze-request pattern. **No email, no
+SMTP, no cost, no `service_role` in the browser.**
+
+- **`0011_password_change_requests.sql`** (applied live): a `password_change_requests` table +
+  three SECURITY DEFINER RPCs. `request_password_change(email, new_password)` is granted to **anon**
+  (the user forgot their password → not signed in): it resolves the account, stores the new
+  password as a **bcrypt hash** (`extensions.crypt(..., gen_salt('bf',10))`), dedupes one pending
+  per user. `approve_password_change` / `reject_password_change` are staff-only (super-admin gym /
+  reception branch); approve writes the stored hash into `auth.users.encrypted_password` so the
+  user can sign in with the new password. RLS: staff-read only (the hash is never selected by the
+  app; the RPCs blank it in their return).
+- **App:** the old email pages are gone (`ResetPasswordPage` deleted; `sendPasswordReset` /
+  `consumeRecoveryTokens` / `updatePassword` removed). `ForgotPasswordPage` is now a request form
+  (email + new password + confirm). The dashboard home gained a **PasswordRequestsPanel** (approve/
+  reject queue) next to the freeze queue.
+- **Supabase config:** custom SMTP was configured then **removed** (Resend key cleared from the
+  project); `site_url` left at the Pages URL.
+
+**Tested (live data layer):**
+- De-risk first: a SQL bcrypt write to `auth.users.encrypted_password` is accepted by GoTrue login
+  (new password works, old rejected).
+- Full flow: anon `request_password_change` → 204; duplicate → `request_exists`; admin sees the
+  pending row (name/email); `approve_password_change` → status approved (hash blanked in return);
+  **sign-in with the new password succeeds**. All test users deleted; seed intact.
+- `npm run build` passes.
+
+**Trust model (documented in DECISIONS):** requests are open to anon and the member picks the new
+password, so **staff must verify identity before approving** — safe for a gym (reception knows its
+members); an admin who is the sole super-admin should reset via the Supabase dashboard if locked out.
+
+### Brand runtime + CSV import + password reset + member QR check-in (2026-07-12) ✅
+Five owner-requested additions on top of the Settings work:
+
+- **Brand colors + logo applied at runtime** (`src/lib/Brand.tsx` + `components/BrandMark`): a
+  `BrandProvider` at the app root fetches the (anon-readable) `gyms` row, sets the `--accent`
+  design token from `primary_color`, and exposes the gym so every header renders the uploaded
+  **logo** (falling back to the name). Saving Identity settings re-skins the app immediately
+  (`useBrand().reload()`). Closes the white-label loop — the saved color/logo now actually change
+  the UI, not just the DB row.
+- **CSV member import** (`members/MemberImport.tsx`, route `/dashboard/members/import`): upload →
+  client-side `parseCsv` → per-row validation (Saudi phone/ID) → preview table → batch insert via
+  the RLS-scoped `createMember`. Reception imports into their own branch; super-admin picks one.
+  Downloadable template. New `parseCsv` in `lib/csv.ts`.
+- **Password reset** — _(email/SMTP version; **superseded 2026-07-13** by the request→approval
+  flow below — see the "Password reset reworked" note. This bullet is kept only as history.)_
+  Original: `ForgotPasswordPage` + `ResetPasswordPage` used `resetPasswordForEmail` + a manual
+  recovery-token parse. Dropped because free tier / GitHub Pages has no mail server.
+- **Member QR + reception scan check-in**: the member portal shows a QR of their `member_code`
+  (`qrcode.react`, on a white tile so it scans). The reception check-in screen gained a **Scan**
+  button opening a camera scanner (`html5-qrcode`, dynamically imported → its own ~375 KB chunk);
+  a decoded code is matched against the RLS-scoped member list and **checked in via the existing
+  `record_check_in` RPC**, so a scan reflects in the system identically to a manual check-in.
+
+**Tested (build + live data layer):**
+- `npm run build` passes; `html5-qrcode` is code-split (lazy), not in the main bundle.
+- **Scan→check-in reflects live:** as a real reception user, `record_check_in` for `M00002`
+  created a `check_ins` row that appears in the feed (then cleaned up) — this is the exact call the
+  scanner triggers.
+- **CSV import path:** reception insert into own branch succeeds (auto `member_code`); insert into
+  another branch → HTTP 403 (import can't cross branch). Test rows deleted; **seed intact (50
+  members / 2 branches / 4 trainers / 0 invites, no leftovers)**.
+- Brand runtime + QR rendering are client-only (no DB) and verified via build; they render in a
+  real browser / on Pages (the sandbox browser can't reach Supabase).
+
+**New deps:** `qrcode.react` (QR render), `html5-qrcode` (camera scan, lazy-loaded).
+
+### Settings — white-label admin (Category 1) (2026-07-12) ✅
+Built the entire **Settings** screen (was a `Placeholder`), super-admin only, as a tabbed page
+(`src/pages/dashboard/settings/`): **Identity · Branches · Staff · Site content**. Completes the
+SPEC's white-label promise — a new gym is now rebrandable from the UI, no SQL needed.
+
+- **Identity** (`IdentitySettings`): edits the `gyms` row — name AR/EN, **logo upload** to the
+  public `public-assets` bucket, primary/secondary colors (native picker + hex), contact
+  email/phone, and social links (instagram/twitter/tiktok/whatsapp). Saves via `updateGym`.
+- **Branches** (`BranchesSettings`): table + add/edit modal — name AR/EN, city, phone, address
+  AR/EN, map link, a 7-day **working-hours** editor, active toggle. `createBranch`/`updateBranch`;
+  reference data reloads after save.
+- **Staff** (`StaffSettings`): lists current staff (reception branch is reassignable inline) and
+  pending invites. **Invite flow avoids putting `service_role` in the browser**: super-admin
+  creates a `staff_invites` row (`0010` migration) and shares a `#/staff-signup?email=…` link; the
+  invited person signs up on the new public **`StaffSignupPage`**, and the extended
+  `handle_new_user()` trigger promotes their profile to `reception` + the invited branch and marks
+  the invite `accepted`.
+- **Site content** (`ContentSettings` + `TrainersSettings`): structured editors for the
+  `site_content` keys the public site reads (**hero** title/subtitle, **facilities**,
+  **testimonials**, **faq** — generic list editor) via `upsertSiteContent`, plus **trainers CRUD**
+  (photo upload, specialty, branch, active). The marketing site is now editable from the dashboard.
+
+**DB:** `0010_staff_invites.sql` applied live (table + RLS `staff_invites_admin_all` + trigger
+update). Features 1/2/4 needed **no new RLS** — `0002` already grants super-admin writes to
+gyms/branches/trainers/site_content.
+
+**Tested (build + live data layer, sandbox browser can't reach Supabase):**
+- `npm run build` passes (tsc strict + vite; 2487 modules).
+- **Identity:** admin PATCH `gyms` succeeds; **reception PATCH blocked** (0 rows, value unchanged); reverted.
+- **Branches / Trainers / Site content:** admin create+update succeed; **reception writes → HTTP 403**; temp rows deleted (seed intact).
+- **Staff invite → promotion:** admin creates invite (`role=reception`, `pending`) → invited email
+  signs up (anon) → **profile auto-promoted to `reception` with the invited `branch_id`** and invite
+  flips to `accepted` (`accepted_user_id` set). **RLS:** reception reads `staff_invites` → 0 rows;
+  reception insert → 403. All test users deleted via the Auth Admin API; 0 leftover rows.
 
 ### Phase 8 — Polish + editorial-athletic redesign (2026-07-11) ✅
 Full UI redesign to an **editorial-athletic** aesthetic (owner-approved), following a strict

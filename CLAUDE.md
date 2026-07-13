@@ -30,20 +30,30 @@ English (LTR) toggle.
 - **All strings via the i18n dictionary — no hardcoded text.** Everything must mirror
   correctly in RTL (layout, tables, charts, icons).
 
-## Current status (2026-07-11)
+## Current status (2026-07-12)
 **All 8 phases done** and verified on the live Supabase project (`hfjyaduiynigylvunnto`);
 deployed to GitHub Pages. UI is redesigned to an **editorial-athletic** system (dark charcoal
 ground, one crimson accent, self-hosted Reem Kufi / Fraunces / IBM Plex Sans Arabic, thin
 lucide icons, hairline-and-whitespace layout — no cards/glow/emoji). Design tokens live in
-`src/index.css` + `tailwind.config.js`. Develop on branch `claude/gym-system-bootstrap-mnn1vh`
-(in sync with `main`). See the **Handoff** section at the top of `PROGRESS.md` for what to
-request from the user (Supabase URL + anon key for `.env`; a `sbp_` PAT to apply migrations
-over HTTPS) and the sandbox networking notes.
+`src/index.css` + `tailwind.config.js`. The **white-label Settings screen** is now fully built
+(Identity / Branches / Staff invites / Site content — see the Settings note in `PROGRESS.md`).
+Develop on branch `claude/gym-system-context-setup-h0pqfe`. See the **Handoff** section at the
+top of `PROGRESS.md` for what to request from the user (Supabase URL + anon key for `.env`; a
+`sbp_` PAT to apply migrations over HTTPS) and the sandbox networking notes.
 
 **Post-launch additions:** national ID on members, member-initiated **freeze requests** with
 reception approval (`freeze_requests`, migration `0009`), rebrand to **أبطال الرياضة**, and a
-home login link. DB migrations run through `0009` (all applied live; `supabase/apply_all.sql`
-is the one-paste bundle).
+home login link, and a full white-label **Settings** screen (gym identity, branch CRUD, staff
+invites `0010`, site-content/trainers editors). **Latest batch:** runtime branding (saved
+`primary_color` → `--accent` + logo shown app-wide), **CSV member import**, **member QR + reception
+camera scan check-in** (`qrcode.react` / `html5-qrcode`), and **password reset by request→staff
+approval** (`password_change_requests`, migration `0011` — no email/SMTP; approve writes a bcrypt
+hash to `auth.users`). **Latest:** staff can reset a member's password on the spot
+(`staff_set_member_password`), the password-request RPC is rate-limited, a **printable membership
+card** at `/card/:id`, an **audit log** (`audit_log` + triggers + a Settings → Activity viewer),
+`expire_due_subscriptions` scheduled on **pg_cron**, and **Vitest** unit tests for `src/lib/`
+(caught + fixed a real `normalizeSaudiPhone` bug). DB migrations run through `0013` (all applied
+live; `supabase/apply_all.sql` is the one-paste bundle). Run tests with `npm test`.
 
 ## Pointer
 Full requirements live in **SPEC.md** — read the relevant section before starting any phase.

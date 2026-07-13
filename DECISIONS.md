@@ -243,3 +243,94 @@
   status to `subscriptions`.
 - **Rebrand** to أبطال الرياضة / Sports Champions lives in data (`gyms` row + seed) and the
   `app.name` dictionary entry.
+
+## Settings — white-label admin (Category 1)
+
+- **Settings is one tabbed screen**, not four routes (`SettingsPage` with local tab state:
+  Identity/Branches/Staff/Content). Simplest reliable option — no extra router wiring, and the
+  nav already has a single "Settings" entry. Each tab is its own component file.
+- **No new RLS for identity/branches/trainers/site_content.** `0002` already grants the
+  super-admin gym-scoped writes to all four public tables, so these features are pure UI + typed
+  `api.ts` helpers over existing policies. Verified live that reception is blocked (403 / 0 rows).
+- **Logos and trainer photos go to the existing public `public-assets` bucket** (public read,
+  super-admin write policy already in `0003`), returning a stable public URL — unlike member
+  photos which use signed URLs from a private bucket. Correct because these assets are shown on
+  the anonymous marketing site.
+- **Staff invites avoid `service_role` in the browser entirely.** Creating an auth user needs the
+  service key or an Edge Function; deploying/testing an Edge Function isn't viable in this
+  HTTPS-only sandbox, and the service key must never reach client code. Chosen pattern: a
+  `staff_invites` table (`0010`, super-admin RLS only) + an **extended `handle_new_user()` trigger**
+  that, on sign-up, promotes a profile to the invited `reception` role/branch when a pending invite
+  matches the email (else the original member default). The super-admin shares a
+  `#/staff-signup?email=…` link; the invitee sets their own password on the new public
+  `StaffSignupPage`. Security stays server-side (SECURITY DEFINER trigger + RLS); no privileged key
+  is exposed. Invite `role` is CHECK-constrained to `reception` so the flow can never mint an admin.
+- **Site content uses structured editors, not raw JSON.** `site_content` is a generic key→JSONB
+  store, but a free-form JSON textarea is easy to corrupt and would break the public site. Instead
+  each known key (hero/facilities/testimonials/faq) has typed fields (a reusable list editor for the
+  array sections), round-tripping the exact shape the marketing pages read.
+
+## Brand runtime · CSV import · password reset · QR check-in
+
+- **Brand applied at runtime via a root `BrandProvider`, not per-screen.** The saved
+  `primary_color`/`logo_url` were dead data until now. A single provider above the router fetches
+  the anon-readable `gyms` row once, writes `--accent` (the token that drives the accent
+  everywhere), and exposes the gym for the logo — so it also covers login/reset screens that sit
+  outside PublicData/ReferenceData. Only `--accent` is overridden (the real token); the default
+  `secondary_color` (#0f172a navy) is *not* mapped onto the sand accent, which would be wrong.
+- **CSV import is client-side + `createMember`, no new RPC.** Parsing/validation happen in the
+  browser (`parseCsv`), then each valid row inserts through the existing RLS-scoped `createMember`.
+  Reason: RLS already scopes inserts to the caller's branch, so a reception import physically
+  cannot cross branches (verified 403) — no privileged bulk path needed. Rows are inserted
+  sequentially with a per-row success/fail tally rather than one transaction, so one bad row never
+  rolls back the whole file.
+- **Password reset via email — SUPERSEDED (2026-07-13).** The first attempt used
+  `resetPasswordForEmail` + a manual recovery-token parse (`detectSessionInUrl` stays off because
+  hash routing owns the URL fragment, so tokens arrive in a *second* `#…` fragment). It was dropped
+  because free tier / GitHub Pages has no mail server and SMTP needs a paid/verified domain or leaks
+  a provider key. Replaced by the request→staff-approval flow described in the next section.
+- **Member QR encodes just the `member_code`; the scanner reuses `record_check_in`.** No new
+  check-in path or token scheme — the scanned code is matched against the already-RLS-scoped member
+  list and passed to the same RPC manual check-in uses, so scans and taps are indistinguishable to
+  the system (and equally branch-scoped). `html5-qrcode` is **dynamically imported** so its camera
+  bundle (~375 KB) is a separate chunk loaded only when reception opens the scanner, keeping the
+  main bundle lean (same tactic as Analytics/Recharts).
+
+- **Password reset is request→approval, not email.** Free-tier + GitHub Pages has no mail server,
+  and wiring SMTP (Resend/Gmail) either needs a paid/verified domain or leaks a provider key.
+  Instead — the owner's idea — a user submits the new password they want; staff approve after
+  verifying identity in person (a gym already does this at the front desk). Mirrors the existing
+  freeze-request pattern. Approval writes the new password straight into
+  `auth.users.encrypted_password` from a **SECURITY DEFINER** function as a bcrypt hash
+  (`extensions.crypt(pw, gen_salt('bf', 10))` — cost 10 to match GoTrue); verified live that GoTrue
+  accepts such a hash at login. This needs **no Edge Function and no `service_role` in the client**
+  (the function runs as its postgres owner). The requesting RPC is granted to `anon` because the
+  user is locked out; the trade-off is that anyone can file a request for any email with a password
+  they choose, so **approval is the security gate** — staff must confirm identity, and the request
+  stores `requested_name`/email to help. The new password is stored only as a bcrypt hash in a
+  staff-read-only table and is never selected by the client (RPC returns blank it). SMTP that was
+  briefly configured for the earlier email flow was removed (provider key cleared from the project).
+
+## Hardening, staff reset, card, audit, cron, tests (0012–0013)
+
+- **Rate limit lives in the RPC, not the client.** `request_password_change` caps at 5/user/24h
+  server-side (the only place it can't be bypassed). Captcha would add bot resistance but needs a
+  provider account/secret, so it's left as a documented follow-up rather than half-wired.
+- **`staff_set_member_password` reuses the same bcrypt-into-`auth.users` mechanism** as the approval
+  flow (validated in 0011/0012) — a SECURITY DEFINER function, branch/gym-scoped, audited. Lets
+  reception fix a member who's standing at the desk without the request round-trip.
+- **Audit via triggers where possible, explicit calls where not.** Money/lifecycle events
+  (`payments` insert, `subscriptions` status change) are captured by AFTER triggers so the RPC layer
+  didn't have to be rewritten; `auth.uid()` still resolves the real actor inside a SECURITY DEFINER
+  context, so the log attributes correctly. Credential actions (password approve/reject/set) call
+  `record_audit` explicitly. Writes bypass RLS via the definer helper; reads are super-admin-only.
+- **Membership card is a top-level print route** (`/card/:id`) like the receipt — no dashboard/portal
+  chrome so `window.print()` yields just the card; `members` RLS decides who can load which id
+  (member sees own, staff see their scope), so one route serves both.
+- **Expiry is now a scheduled job, not only derived.** `subscriptionDisplayStatus()` already shows
+  "expired" from the date, but reports read the stored status, so `expire_due_subscriptions()` is
+  scheduled on pg_cron (`0013`) to flip rows for real. Kept the derived display too (instant, no
+  wait for the job).
+- **Unit tests target pure `lib/` logic** (`phone`, `subscriptionStatus`, `csv`, `analytics`) with
+  Vitest reusing the Vite config's `@` alias — no DOM/network, fast, deterministic. They immediately
+  paid for themselves by surfacing the `normalizeSaudiPhone` slice bug, fixed in source.

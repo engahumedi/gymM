@@ -12,7 +12,7 @@ import { StatusBadge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { SelectInput } from '@/components/ui/Field';
 import { InlineLoading, EmptyState, ErrorText, PageHeader, DaysLeft } from '@/components/ui/misc';
-import { Search, UserPlus, ICON_SM } from '@/components/ui/icons';
+import { Search, UserPlus, Download, ICON_SM } from '@/components/ui/icons';
 
 const STATUS_OPTIONS: DisplayStatus[] = ['active', 'expiring', 'expired', 'frozen', 'pending', 'none'];
 
@@ -50,7 +50,14 @@ export function MembersList() {
       <PageHeader
         eyebrow={data ? `${data.length} ${t('members.count')}` : undefined}
         title={t('members.title')}
-        action={<Button onClick={() => navigate('/dashboard/members/new')}><UserPlus {...ICON_SM} />{t('members.register')}</Button>}
+        action={
+          <div className="flex items-center gap-2">
+            <Button variant="secondary" onClick={() => navigate('/dashboard/members/import')}>
+              <Download {...ICON_SM} className="rotate-180" />{t('import.title')}
+            </Button>
+            <Button onClick={() => navigate('/dashboard/members/new')}><UserPlus {...ICON_SM} />{t('members.register')}</Button>
+          </div>
+        }
       />
 
       <div className="mb-6 flex flex-wrap items-center gap-3">

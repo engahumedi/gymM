@@ -189,6 +189,50 @@ export interface SiteContent {
   updated_at: string;
 }
 
+export type PasswordRequestStatus = 'pending' | 'approved' | 'rejected';
+
+export interface PasswordChangeRequest {
+  id: string;
+  gym_id: string | null;
+  user_id: string;
+  member_id: string | null;
+  branch_id: string | null;
+  requested_email: string;
+  requested_name: string | null;
+  status: PasswordRequestStatus;
+  created_at: string;
+  decided_at: string | null;
+  decided_by: string | null;
+}
+
+export interface AuditEntry {
+  id: number;
+  gym_id: string | null;
+  actor: string | null;
+  actor_name: string | null;
+  action: string;
+  entity: string | null;
+  entity_id: string | null;
+  meta: Record<string, unknown>;
+  created_at: string;
+}
+
+export type StaffInviteStatus = 'pending' | 'accepted';
+
+export interface StaffInvite {
+  id: string;
+  gym_id: string;
+  email: string;
+  full_name: string | null;
+  branch_id: string | null;
+  role: UserRole;
+  status: StaffInviteStatus;
+  created_by: string | null;
+  created_at: string;
+  accepted_at: string | null;
+  accepted_user_id: string | null;
+}
+
 type Row<T> = { Row: T; Insert: Partial<T>; Update: Partial<T>; Relationships: [] };
 
 export interface Database {
@@ -207,6 +251,9 @@ export interface Database {
       trainers: Row<Trainer>;
       site_content: Row<SiteContent>;
       freeze_requests: Row<FreezeRequest>;
+      staff_invites: Row<StaffInvite>;
+      password_change_requests: Row<PasswordChangeRequest>;
+      audit_log: Row<AuditEntry>;
     };
     Views: Record<string, never>;
     Functions: {

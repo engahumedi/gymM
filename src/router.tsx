@@ -8,10 +8,10 @@ import { HomePage } from '@/pages/public/HomePage';
 import { PlansPage, BranchesPage, TrainersPage, ContactPage } from '@/pages/public/PublicPages';
 import { JoinPage } from '@/pages/public/JoinPage';
 import { NotFound } from '@/pages/NotFound';
-import { Placeholder } from '@/pages/Placeholder';
 import { DashboardHome } from '@/pages/dashboard/DashboardHome';
 import { MembersList } from '@/pages/dashboard/members/MembersList';
 import { MemberForm } from '@/pages/dashboard/members/MemberForm';
+import { MemberImport } from '@/pages/dashboard/members/MemberImport';
 import { MemberProfile } from '@/pages/dashboard/members/MemberProfile';
 import { PlansList } from '@/pages/dashboard/plans/PlansList';
 import { CheckInScreen } from '@/pages/dashboard/CheckInScreen';
@@ -24,6 +24,10 @@ const Analytics = lazy(() =>
   import('@/pages/dashboard/analytics/Analytics').then((m) => ({ default: m.Analytics })),
 );
 import { ReceiptView } from '@/pages/ReceiptView';
+import { MembershipCard } from '@/pages/MembershipCard';
+import { SettingsPage } from '@/pages/dashboard/settings/SettingsPage';
+import { StaffSignupPage } from '@/pages/StaffSignupPage';
+import { ForgotPasswordPage } from '@/pages/ForgotPasswordPage';
 import { PortalHome } from '@/pages/portal/PortalHome';
 import { PortalPayments, PortalCheckins } from '@/pages/portal/PortalHistory';
 import { RequireRole as Guard } from '@/auth/RequireRole';
@@ -43,12 +47,23 @@ export const router = createHashRouter([
   },
 
   { path: '/login', element: <LoginPage /> },
+  { path: '/staff-signup', element: <StaffSignupPage /> },
+  { path: '/forgot-password', element: <ForgotPasswordPage /> },
 
   {
     path: '/receipt/:id',
     element: (
       <Guard allow={['super_admin', 'reception']}>
         <ReceiptView />
+      </Guard>
+    ),
+  },
+
+  {
+    path: '/card/:id',
+    element: (
+      <Guard allow={['super_admin', 'reception', 'member']}>
+        <MembershipCard />
       </Guard>
     ),
   },
@@ -63,6 +78,7 @@ export const router = createHashRouter([
     children: [
       { index: true, element: <DashboardHome /> },
       { path: 'members', element: <MembersList /> },
+      { path: 'members/import', element: <MemberImport /> },
       { path: 'members/new', element: <MemberForm /> },
       { path: 'members/:id', element: <MemberProfile /> },
       { path: 'members/:id/edit', element: <MemberForm /> },
@@ -86,7 +102,14 @@ export const router = createHashRouter([
           </Guard>
         ),
       },
-      { path: 'settings', element: <Placeholder titleKey="dashboard.settings" /> },
+      {
+        path: 'settings',
+        element: (
+          <Guard allow={['super_admin']}>
+            <SettingsPage />
+          </Guard>
+        ),
+      },
     ],
   },
 
