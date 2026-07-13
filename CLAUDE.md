@@ -44,7 +44,7 @@ top of `PROGRESS.md` for what to request from the user (Supabase URL + anon key 
 **Post-launch additions:** national ID on members, member-initiated **freeze requests** with
 reception approval (`freeze_requests`, migration `0009`), rebrand to **أبطال الرياضة**, and a
 home login link, and a full white-label **Settings** screen (gym identity, branch CRUD, staff
-invites, site-content/trainers editors). DB migrations run through `0010` (all applied live;
+invites, site-content/trainers editors). DB migrations run through `0011` (all applied live;
 `supabase/apply_all.sql` is the one-paste bundle).
 
 ## Pointer

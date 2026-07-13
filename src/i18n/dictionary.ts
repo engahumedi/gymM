@@ -548,20 +548,27 @@ export const dictionary = {
   'import.err.parse': { ar: 'تعذّر قراءة الملف. تأكد أنه CSV صالح.', en: 'Could not read the file. Ensure it is valid CSV.' },
   'import.err.no_name': { ar: 'الاسم مفقود', en: 'Name missing' },
 
-  // --- Password reset ---
+  // --- Password change request (staff-approved, no email) ---
   'forgot.link': { ar: 'نسيت كلمة المرور؟', en: 'Forgot password?' },
-  'forgot.title': { ar: 'استعادة كلمة المرور', en: 'Reset password' },
-  'forgot.desc': { ar: 'أدخل بريدك وسنرسل لك رابط إعادة تعيين كلمة المرور.', en: 'Enter your email and we’ll send you a reset link.' },
-  'forgot.submit': { ar: 'إرسال رابط الاستعادة', en: 'Send reset link' },
-  'forgot.sent': { ar: 'إن كان البريد مسجّلاً، أرسلنا رابط الاستعادة. تحقّق من بريدك.', en: 'If that email exists, we sent a reset link. Check your inbox.' },
   'forgot.back_login': { ar: 'العودة لتسجيل الدخول', en: 'Back to sign in' },
-  'reset.title': { ar: 'تعيين كلمة مرور جديدة', en: 'Set a new password' },
-  'reset.desc': { ar: 'اختر كلمة مرور جديدة لحسابك (٦ أحرف على الأقل).', en: 'Choose a new password for your account (at least 6 characters).' },
-  'reset.new_password': { ar: 'كلمة المرور الجديدة', en: 'New password' },
-  'reset.submit': { ar: 'حفظ كلمة المرور', en: 'Save password' },
-  'reset.done': { ar: 'تم تحديث كلمة المرور. يتم تحويلك لتسجيل الدخول…', en: 'Password updated. Redirecting to sign in…' },
-  'reset.invalid': { ar: 'رابط الاستعادة غير صالح أو منتهٍ. اطلب رابطاً جديداً.', en: 'The reset link is invalid or expired. Request a new one.' },
+  'pwreq.title': { ar: 'طلب تغيير كلمة المرور', en: 'Request a password change' },
+  'pwreq.desc': {
+    ar: 'أدخل بريدك وكلمة المرور الجديدة التي تريدها. يصل الطلب إلى إدارة النادي، وبعد تأكيد هويتك يُفعّلونها لك.',
+    en: 'Enter your email and the new password you want. Your request goes to the gym staff, who activate it after verifying your identity.',
+  },
+  'pwreq.new_password': { ar: 'كلمة المرور الجديدة', en: 'New password' },
+  'pwreq.confirm': { ar: 'تأكيد كلمة المرور', en: 'Confirm password' },
+  'pwreq.submit': { ar: 'إرسال الطلب', en: 'Send request' },
+  'pwreq.sent': { ar: 'تم إرسال طلبك للإدارة. ستُفعّل كلمة المرور الجديدة بعد الموافقة.', en: 'Your request was sent to staff. The new password activates once approved.' },
+  'pwreq.err.invalid': { ar: 'تحقّق من البريد وكلمة المرور (٦ أحرف على الأقل).', en: 'Check the email and password (at least 6 characters).' },
+  'pwreq.err.mismatch': { ar: 'كلمتا المرور غير متطابقتين.', en: 'The passwords do not match.' },
+  'pwreq.err.no_user': { ar: 'لا يوجد حساب بهذا البريد.', en: 'No account with that email.' },
+  'pwreq.err.exists': { ar: 'لديك طلب معلّق بالفعل. انتظر قرار الإدارة.', en: 'You already have a pending request. Please wait for staff.' },
   'reset.err.short': { ar: 'كلمة المرور قصيرة جداً (٦ أحرف على الأقل).', en: 'Password too short (at least 6 characters).' },
+  // Dashboard approval queue
+  'pwreq.queue': { ar: 'طلبات تغيير كلمة المرور', en: 'Password change requests' },
+  'pwreq.approve': { ar: 'موافقة', en: 'Approve' },
+  'pwreq.reject': { ar: 'رفض', en: 'Reject' },
 
   // --- QR check-in ---
   'portal.qr.title': { ar: 'بطاقة العضوية', en: 'Membership card' },

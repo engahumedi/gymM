@@ -296,3 +296,18 @@
   the system (and equally branch-scoped). `html5-qrcode` is **dynamically imported** so its camera
   bundle (~375 KB) is a separate chunk loaded only when reception opens the scanner, keeping the
   main bundle lean (same tactic as Analytics/Recharts).
+
+- **Password reset is request→approval, not email.** Free-tier + GitHub Pages has no mail server,
+  and wiring SMTP (Resend/Gmail) either needs a paid/verified domain or leaks a provider key.
+  Instead — the owner's idea — a user submits the new password they want; staff approve after
+  verifying identity in person (a gym already does this at the front desk). Mirrors the existing
+  freeze-request pattern. Approval writes the new password straight into
+  `auth.users.encrypted_password` from a **SECURITY DEFINER** function as a bcrypt hash
+  (`extensions.crypt(pw, gen_salt('bf', 10))` — cost 10 to match GoTrue); verified live that GoTrue
+  accepts such a hash at login. This needs **no Edge Function and no `service_role` in the client**
+  (the function runs as its postgres owner). The requesting RPC is granted to `anon` because the
+  user is locked out; the trade-off is that anyone can file a request for any email with a password
+  they choose, so **approval is the security gate** — staff must confirm identity, and the request
+  stores `requested_name`/email to help. The new password is stored only as a bcrypt hash in a
+  staff-read-only table and is never selected by the client (RPC returns blank it). SMTP that was
+  briefly configured for the earlier email flow was removed (provider key cleared from the project).

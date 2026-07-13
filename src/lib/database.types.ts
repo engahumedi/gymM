@@ -189,6 +189,22 @@ export interface SiteContent {
   updated_at: string;
 }
 
+export type PasswordRequestStatus = 'pending' | 'approved' | 'rejected';
+
+export interface PasswordChangeRequest {
+  id: string;
+  gym_id: string | null;
+  user_id: string;
+  member_id: string | null;
+  branch_id: string | null;
+  requested_email: string;
+  requested_name: string | null;
+  status: PasswordRequestStatus;
+  created_at: string;
+  decided_at: string | null;
+  decided_by: string | null;
+}
+
 export type StaffInviteStatus = 'pending' | 'accepted';
 
 export interface StaffInvite {
@@ -224,6 +240,7 @@ export interface Database {
       site_content: Row<SiteContent>;
       freeze_requests: Row<FreezeRequest>;
       staff_invites: Row<StaffInvite>;
+      password_change_requests: Row<PasswordChangeRequest>;
     };
     Views: Record<string, never>;
     Functions: {

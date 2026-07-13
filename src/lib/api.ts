@@ -564,33 +564,41 @@ export async function signUpStaff(email: string, password: string): Promise<void
   if (error) throw new Error(error.message);
 }
 
-// ---- Password reset (self-service) ----------------------------------------
-// Sends a recovery email whose link returns to the app's #/reset-password route.
-export async function sendPasswordReset(email: string): Promise<void> {
-  const redirectTo = `${window.location.href.split('#')[0]}#/reset-password`;
-  const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
-  if (error) throw new Error(error.message);
+// ---- Password change requests (request → staff approval, no email) --------
+import type { PasswordChangeRequest } from './database.types';
+
+// A user who forgot their password submits the new one they want; staff verify
+// identity in person and approve. Callable while signed out (anon).
+export async function requestPasswordChange(email: string, newPassword: string): Promise<void> {
+  await rpcCall<void>('request_password_change', {
+    p_email: email,
+    p_new_password: newPassword,
+  });
 }
 
-// The recovery link lands with tokens in a second URL fragment (we keep
-// detectSessionInUrl off because hash routing owns the first fragment). Parse
-// them, establish the recovery session, and clean the URL. Returns true when a
-// recovery session was set.
-export async function consumeRecoveryTokens(): Promise<boolean> {
-  const raw = window.location.hash;
-  const idx = raw.indexOf('#', 1);
-  if (idx === -1) return false;
-  const params = new URLSearchParams(raw.slice(idx + 1));
-  const access_token = params.get('access_token');
-  const refresh_token = params.get('refresh_token');
-  if (!access_token || !refresh_token || params.get('type') !== 'recovery') return false;
-  const { error } = await supabase.auth.setSession({ access_token, refresh_token });
-  if (error) throw new Error(error.message);
-  window.history.replaceState(null, '', raw.slice(0, idx)); // strip tokens, keep route
-  return true;
+// Staff queue: pending requests in scope. Never selects the password hash.
+export interface PasswordRequestItem {
+  id: string;
+  requested_email: string;
+  requested_name: string | null;
+  branch_id: string | null;
+  created_at: string;
 }
 
-export async function updatePassword(password: string): Promise<void> {
-  const { error } = await supabase.auth.updateUser({ password });
-  if (error) throw new Error(error.message);
+export async function fetchPendingPasswordRequests(): Promise<PasswordRequestItem[]> {
+  return unwrap(
+    await supabase
+      .from('password_change_requests')
+      .select('id, requested_email, requested_name, branch_id, created_at')
+      .eq('status', 'pending')
+      .order('created_at', { ascending: true }),
+  ) as unknown as PasswordRequestItem[];
+}
+
+export async function approvePasswordChange(id: string): Promise<PasswordChangeRequest> {
+  return rpcCall<PasswordChangeRequest>('approve_password_change', { p_request_id: id });
+}
+
+export async function rejectPasswordChange(id: string): Promise<PasswordChangeRequest> {
+  return rpcCall<PasswordChangeRequest>('reject_password_change', { p_request_id: id });
 }

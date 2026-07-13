@@ -32,7 +32,7 @@ redesigned (editorial-athletic) and deployed to GitHub Pages.
   QR + reception scan check-in, CSV import, password reset, runtime brand colors/logo.)
 - **Live Supabase project:** URL `https://hfjyaduiynigylvunnto.supabase.co` (ref
   `hfjyaduiynigylvunnto`, Postgres 17). Schema + RLS + functions + seed are already applied,
-  **migrations through `0010`** (`supabase/apply_all.sql` is the regenerated one-paste bundle).
+  **migrations through `0011`** (`supabase/apply_all.sql` is the regenerated one-paste bundle).
 - **What a new session must get from the user** (nothing secret is committed):
   1. `VITE_SUPABASE_URL` + **anon** key → create a local `.env` (gitignored) so `npm run
      dev/build` hit the live project. The anon key is client-safe (RLS protects data).
@@ -52,6 +52,38 @@ redesigned (editorial-athletic) and deployed to GitHub Pages.
 
 ## Session notes
 <!-- Append a short report after each phase: what was tested, what passed, what was fixed. -->
+
+### Password reset reworked: request → staff approval (no SMTP) (2026-07-13) ✅
+Replaced the email/SMTP password recovery with a **request→approval** flow (owner's idea; fits a
+gym where staff verify members in person), mirroring the freeze-request pattern. **No email, no
+SMTP, no cost, no `service_role` in the browser.**
+
+- **`0011_password_change_requests.sql`** (applied live): a `password_change_requests` table +
+  three SECURITY DEFINER RPCs. `request_password_change(email, new_password)` is granted to **anon**
+  (the user forgot their password → not signed in): it resolves the account, stores the new
+  password as a **bcrypt hash** (`extensions.crypt(..., gen_salt('bf',10))`), dedupes one pending
+  per user. `approve_password_change` / `reject_password_change` are staff-only (super-admin gym /
+  reception branch); approve writes the stored hash into `auth.users.encrypted_password` so the
+  user can sign in with the new password. RLS: staff-read only (the hash is never selected by the
+  app; the RPCs blank it in their return).
+- **App:** the old email pages are gone (`ResetPasswordPage` deleted; `sendPasswordReset` /
+  `consumeRecoveryTokens` / `updatePassword` removed). `ForgotPasswordPage` is now a request form
+  (email + new password + confirm). The dashboard home gained a **PasswordRequestsPanel** (approve/
+  reject queue) next to the freeze queue.
+- **Supabase config:** custom SMTP was configured then **removed** (Resend key cleared from the
+  project); `site_url` left at the Pages URL.
+
+**Tested (live data layer):**
+- De-risk first: a SQL bcrypt write to `auth.users.encrypted_password` is accepted by GoTrue login
+  (new password works, old rejected).
+- Full flow: anon `request_password_change` → 204; duplicate → `request_exists`; admin sees the
+  pending row (name/email); `approve_password_change` → status approved (hash blanked in return);
+  **sign-in with the new password succeeds**. All test users deleted; seed intact.
+- `npm run build` passes.
+
+**Trust model (documented in DECISIONS):** requests are open to anon and the member picks the new
+password, so **staff must verify identity before approving** — safe for a gym (reception knows its
+members); an admin who is the sole super-admin should reset via the Supabase dashboard if locked out.
 
 ### Brand runtime + CSV import + password reset + member QR check-in (2026-07-12) ✅
 Five owner-requested additions on top of the Settings work:

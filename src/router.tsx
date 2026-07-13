@@ -27,7 +27,6 @@ import { ReceiptView } from '@/pages/ReceiptView';
 import { SettingsPage } from '@/pages/dashboard/settings/SettingsPage';
 import { StaffSignupPage } from '@/pages/StaffSignupPage';
 import { ForgotPasswordPage } from '@/pages/ForgotPasswordPage';
-import { ResetPasswordPage } from '@/pages/ResetPasswordPage';
 import { PortalHome } from '@/pages/portal/PortalHome';
 import { PortalPayments, PortalCheckins } from '@/pages/portal/PortalHistory';
 import { RequireRole as Guard } from '@/auth/RequireRole';
@@ -49,7 +48,6 @@ export const router = createHashRouter([
   { path: '/login', element: <LoginPage /> },
   { path: '/staff-signup', element: <StaffSignupPage /> },
   { path: '/forgot-password', element: <ForgotPasswordPage /> },
-  { path: '/reset-password', element: <ResetPasswordPage /> },
 
   {
     path: '/receipt/:id',

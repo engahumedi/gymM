@@ -1,12 +1,16 @@
 import { Link } from 'react-router-dom';
 import { useI18n } from '@/i18n/I18nProvider';
 import { useAuth } from '@/auth/AuthProvider';
-import { fetchMembers, fetchPendingFreezeRequests, approveFreezeRequest, rejectFreezeRequest, type MemberListItem } from '@/lib/api';
+import {
+  fetchMembers, fetchPendingFreezeRequests, approveFreezeRequest, rejectFreezeRequest,
+  fetchPendingPasswordRequests, approvePasswordChange, rejectPasswordChange,
+  type MemberListItem,
+} from '@/lib/api';
 import { useAsync } from '@/lib/useAsync';
 import { pickCurrent, subscriptionDisplayStatus, type DisplayStatus } from '@/lib/subscriptionStatus';
 import { PageHeader, InlineLoading } from '@/components/ui/misc';
 import { Button } from '@/components/ui/Button';
-import { ArrowUpRight, Snowflake, ICON_SM } from '@/components/ui/icons';
+import { ArrowUpRight, Snowflake, KeyRound, ICON_SM } from '@/components/ui/icons';
 import { useState } from 'react';
 import type { MessageKey } from '@/i18n/dictionary';
 
@@ -40,6 +44,7 @@ export function DashboardHome() {
             </div>
           </div>
 
+          <PasswordRequestsPanel />
           <FreezeRequestsPanel />
 
           {/* Alerts — uneven split, hairline lists (no boxes) */}
@@ -51,6 +56,46 @@ export function DashboardHome() {
         </>
       )}
     </div>
+  );
+}
+
+function PasswordRequestsPanel() {
+  const { t } = useI18n();
+  const { data, loading, reload } = useAsync(fetchPendingPasswordRequests, []);
+  const [busyId, setBusyId] = useState<string | null>(null);
+
+  async function act(id: string, kind: 'approve' | 'reject') {
+    setBusyId(id);
+    try {
+      if (kind === 'approve') await approvePasswordChange(id);
+      else await rejectPasswordChange(id);
+      reload();
+    } finally { setBusyId(null); }
+  }
+
+  if (loading || (data ?? []).length === 0) return null;
+  return (
+    <section className="mb-12">
+      <h3 className="mb-1 flex items-center gap-2 border-b border-border pb-3 text-sm font-semibold text-text">
+        <KeyRound {...ICON_SM} className="text-sand" />
+        {t('pwreq.queue')}
+        <span className="text-faint">{(data ?? []).length}</span>
+      </h3>
+      <ul>
+        {(data ?? []).map((r) => (
+          <li key={r.id} className="flex flex-wrap items-center justify-between gap-3 border-b border-border py-3 text-sm">
+            <div>
+              <span className="text-text">{r.requested_name ?? r.requested_email}</span>
+              <span dir="ltr" className="ms-3 text-faint">{r.requested_email}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button loading={busyId === r.id} onClick={() => act(r.id, 'approve')}>{t('pwreq.approve')}</Button>
+              <Button variant="secondary" onClick={() => act(r.id, 'reject')}>{t('pwreq.reject')}</Button>
+            </div>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
 
