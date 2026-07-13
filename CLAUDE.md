@@ -44,8 +44,12 @@ top of `PROGRESS.md` for what to request from the user (Supabase URL + anon key 
 **Post-launch additions:** national ID on members, member-initiated **freeze requests** with
 reception approval (`freeze_requests`, migration `0009`), rebrand to **أبطال الرياضة**, and a
 home login link, and a full white-label **Settings** screen (gym identity, branch CRUD, staff
-invites, site-content/trainers editors). DB migrations run through `0011` (all applied live;
-`supabase/apply_all.sql` is the one-paste bundle).
+invites `0010`, site-content/trainers editors). **Latest batch:** runtime branding (saved
+`primary_color` → `--accent` + logo shown app-wide), **CSV member import**, **member QR + reception
+camera scan check-in** (`qrcode.react` / `html5-qrcode`), and **password reset by request→staff
+approval** (`password_change_requests`, migration `0011` — no email/SMTP; approve writes a bcrypt
+hash to `auth.users`). DB migrations run through `0011` (all applied live; `supabase/apply_all.sql`
+is the one-paste bundle).
 
 ## Pointer
 Full requirements live in **SPEC.md** — read the relevant section before starting any phase.

@@ -28,8 +28,9 @@ redesigned (editorial-athletic) and deployed to GitHub Pages.
   email" in Auth settings so sign-ups get an immediate session.
 - **Possible next work** (owner-facing suggestions, not started): real WhatsApp/SMS send (deploy
   the `notify` Edge Function), 15% VAT on receipts, cross-branch check-in for all-branch plans,
-  `lib/` unit tests, and scheduling `expire_due_subscriptions` on pg_cron. (Done already: member
-  QR + reception scan check-in, CSV import, password reset, runtime brand colors/logo.)
+  `lib/` unit tests, and scheduling `expire_due_subscriptions` on pg_cron. (Done already: white-label
+  Settings, runtime brand colors/logo, CSV member import, member QR + reception scan check-in, and
+  password reset by request→staff approval — no email/SMTP.)
 - **Live Supabase project:** URL `https://hfjyaduiynigylvunnto.supabase.co` (ref
   `hfjyaduiynigylvunnto`, Postgres 17). Schema + RLS + functions + seed are already applied,
   **migrations through `0011`** (`supabase/apply_all.sql` is the regenerated one-paste bundle).
@@ -98,11 +99,10 @@ Five owner-requested additions on top of the Settings work:
   client-side `parseCsv` → per-row validation (Saudi phone/ID) → preview table → batch insert via
   the RLS-scoped `createMember`. Reception imports into their own branch; super-admin picks one.
   Downloadable template. New `parseCsv` in `lib/csv.ts`.
-- **Password reset** (`ForgotPasswordPage` + `ResetPasswordPage`, routes `/forgot-password`,
-  `/reset-password`; link on login): `resetPasswordForEmail` → recovery link. Because
-  `detectSessionInUrl` is off (hash routing owns the fragment), `consumeRecoveryTokens()` parses
-  the recovery tokens from the second URL fragment, sets the session, then `updateUser` sets the
-  new password. **Requires SMTP configured in Supabase Auth to actually deliver the email.**
+- **Password reset** — _(email/SMTP version; **superseded 2026-07-13** by the request→approval
+  flow below — see the "Password reset reworked" note. This bullet is kept only as history.)_
+  Original: `ForgotPasswordPage` + `ResetPasswordPage` used `resetPasswordForEmail` + a manual
+  recovery-token parse. Dropped because free tier / GitHub Pages has no mail server.
 - **Member QR + reception scan check-in**: the member portal shows a QR of their `member_code`
   (`qrcode.react`, on a white tile so it scans). The reception check-in screen gained a **Scan**
   button opening a camera scanner (`html5-qrcode`, dynamically imported → its own ~375 KB chunk);

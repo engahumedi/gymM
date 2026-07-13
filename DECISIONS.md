@@ -284,12 +284,11 @@
   cannot cross branches (verified 403) — no privileged bulk path needed. Rows are inserted
   sequentially with a per-row success/fail tally rather than one transaction, so one bad row never
   rolls back the whole file.
-- **Password reset parses recovery tokens manually.** `detectSessionInUrl` stays **off** because
-  hash routing owns the first URL fragment; the recovery link therefore lands with tokens in a
-  *second* `#…` fragment. `consumeRecoveryTokens()` reads that fragment, `setSession`s, and strips
-  it from the URL — avoiding the classic HashRouter⇄Supabase fragment clash without turning
-  detection back on (which would fight the router). **Delivery needs SMTP configured in Supabase
-  Auth**; the code path is provider-agnostic.
+- **Password reset via email — SUPERSEDED (2026-07-13).** The first attempt used
+  `resetPasswordForEmail` + a manual recovery-token parse (`detectSessionInUrl` stays off because
+  hash routing owns the URL fragment, so tokens arrive in a *second* `#…` fragment). It was dropped
+  because free tier / GitHub Pages has no mail server and SMTP needs a paid/verified domain or leaks
+  a provider key. Replaced by the request→staff-approval flow described in the next section.
 - **Member QR encodes just the `member_code`; the scanner reuses `record_check_in`.** No new
   check-in path or token scheme — the scanned code is matched against the already-RLS-scoped member
   list and passed to the same RPC manual check-in uses, so scans and taps are indistinguishable to
