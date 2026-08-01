@@ -536,6 +536,79 @@ export async function rejectFreezeRequest(id: string): Promise<FreezeRequest> {
 // ---- Public site content (Phase 7) ---------------------------------------
 import type { Notification, Trainer, SiteContent, Gender } from './database.types';
 
+// ---- The whole marketing site in ONE request -------------------------------
+// This project's database lives in ap-northeast-1 while its visitors are in
+// Saudi Arabia, so every round trip is expensive. The public pages used to make
+// five separate calls (six — the brand provider fetched the gym again) and
+// rendered nothing until the slowest one returned. `public_site_data()` returns
+// the lot in one call; the result is cached in localStorage so a repeat visit
+// paints immediately from cache and refreshes in the background.
+
+export interface PublicSitePayload {
+  gym: Gym | null;
+  plans: Plan[];
+  branches: Branch[];
+  trainers: Trainer[];
+  content: Record<string, Record<string, unknown>>;
+}
+
+const SITE_CACHE_KEY = 'gym.public-site.v1';
+// Beyond this the cache is ignored rather than shown: a visitor should never be
+// served a months-old price for the split second before the refresh lands.
+const SITE_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
+
+function emptySite(): PublicSitePayload {
+  return { gym: null, plans: [], branches: [], trainers: [], content: {} };
+}
+
+export function readCachedSiteData(): PublicSitePayload | null {
+  try {
+    const raw = localStorage.getItem(SITE_CACHE_KEY);
+    if (!raw) return null;
+    const { at, data } = JSON.parse(raw) as { at: number; data: PublicSitePayload };
+    if (!data || typeof at !== 'number' || Date.now() - at > SITE_CACHE_MAX_AGE_MS) return null;
+    return { ...emptySite(), ...data };
+  } catch {
+    return null; // private mode, quota, or a shape from an older version
+  }
+}
+
+function writeCachedSiteData(data: PublicSitePayload): void {
+  try {
+    localStorage.setItem(SITE_CACHE_KEY, JSON.stringify({ at: Date.now(), data }));
+  } catch {
+    /* caching is an optimisation, never a requirement */
+  }
+}
+
+// Shared in-flight promise: the brand provider and the public pages both want
+// this on first paint, and between them they must cause exactly one request.
+let sitePending: Promise<PublicSitePayload> | null = null;
+
+export function fetchPublicSiteData(force = false): Promise<PublicSitePayload> {
+  if (force) sitePending = null;
+  if (!sitePending) {
+    sitePending = rpcCall('public_site_data', {})
+      .then((raw) => {
+        const data: PublicSitePayload = {
+          gym: raw?.gym ?? null,
+          plans: raw?.plans ?? [],
+          branches: raw?.branches ?? [],
+          trainers: raw?.trainers ?? [],
+          content: raw?.content ?? {},
+        };
+        writeCachedSiteData(data);
+        return data;
+      })
+      .catch((e: unknown) => {
+        sitePending = null; // let the next mount retry
+        throw e;
+      });
+  }
+  return sitePending;
+}
+
+
 export async function fetchTrainers(): Promise<Trainer[]> {
   return unwrap(
     await supabase.from('trainers').select('*').eq('is_active', true).order('sort_order'),

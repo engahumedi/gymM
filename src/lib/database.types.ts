@@ -380,6 +380,18 @@ export type Database = {
         Args: { p_member_id: string; p_new_password: string };
         Returns: undefined;
       };
+      // The whole marketing site in one call (migration 0016) — the public
+      // pages used to make five separate round trips for this.
+      public_site_data: {
+        Args: Record<string, never>;
+        Returns: {
+          gym: Gym | null;
+          plans: Plan[];
+          branches: Branch[];
+          trainers: Trainer[];
+          content: Record<string, Record<string, unknown>>;
+        };
+      };
     };
     Enums: {
       user_role: UserRole;

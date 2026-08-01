@@ -1,6 +1,5 @@
-import { createContext, useContext, useEffect, type ReactNode } from 'react';
-import { fetchGym } from './api';
-import { useAsync } from './useAsync';
+import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import { fetchPublicSiteData, readCachedSiteData } from './api';
 import { localizedName } from './display';
 import { useI18n } from '@/i18n/I18nProvider';
 import type { Locale } from '@/i18n/dictionary';
@@ -59,13 +58,30 @@ export function applyBrandDocument(gym: Gym | null, locale: Locale): void {
   else if (defaultIcon.type) link.type = defaultIcon.type;
 }
 
-// Fetches the (anon-readable) gym row once at app root, applies its brand colors,
-// and exposes it so layouts can render the logo. Kept separate from the heavier
-// PublicData/ReferenceData providers so it also covers login / reset screens.
+// Applies the gym's brand at app root — colors, document title, favicon, logo —
+// and exposes it so every layout can render the logo. Lives above the router so
+// it also covers login / password screens, which have no PublicData provider.
 export function BrandProvider({ children }: { children: ReactNode }) {
   const { locale } = useI18n();
-  const { data, reload } = useAsync(fetchGym, []);
-  const gym = data ?? null;
+  // Shares the single public_site_data request (and its cache) with the public
+  // pages, so the brand no longer costs the visitor a second round trip.
+  const [gym, setGym] = useState<Gym | null>(() => readCachedSiteData()?.gym ?? null);
+  const [nonce, setNonce] = useState(0);
+  const reload = () => setNonce((n) => n + 1);
+
+  useEffect(() => {
+    let active = true;
+    fetchPublicSiteData(nonce > 0)
+      .then((site) => {
+        if (active) setGym(site.gym);
+      })
+      .catch(() => {
+        /* the neutral defaults in index.html stand */
+      });
+    return () => {
+      active = false;
+    };
+  }, [nonce]);
 
   useEffect(() => {
     applyBrandColors(gym);

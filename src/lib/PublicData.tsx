@@ -1,6 +1,5 @@
-import { createContext, useContext, type ReactNode } from 'react';
-import { fetchBranches, fetchGym, fetchPlans, fetchSiteContent, fetchTrainers } from './api';
-import { useAsync } from './useAsync';
+import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import { fetchPublicSiteData, readCachedSiteData, type PublicSitePayload } from './api';
 import type { Branch, Gym, Plan, Trainer } from './database.types';
 
 interface PublicData {
@@ -14,18 +13,30 @@ interface PublicData {
 
 const Ctx = createContext<PublicData | null>(null);
 
-// Everything the marketing site renders comes from the DB (public-readable),
-// loaded once here so any gym rebrands by editing data, not code.
+// Everything the marketing site renders comes from the DB (public-readable), so
+// any gym rebrands by editing data, not code. It arrives in ONE request
+// (public_site_data), and a cached copy from the previous visit is shown
+// immediately while the fresh one is on its way — the database is a long way
+// from the visitor, and a stale price for a moment beats a spinner for a second.
 export function PublicDataProvider({ children }: { children: ReactNode }) {
-  const { data, loading } = useAsync(async () => {
-    const [gym, plans, branches, trainers, content] = await Promise.all([
-      fetchGym(),
-      fetchPlans(true),
-      fetchBranches(),
-      fetchTrainers(),
-      fetchSiteContent(),
-    ]);
-    return { gym, plans, branches, trainers, content };
+  const [data, setData] = useState<PublicSitePayload | null>(() => readCachedSiteData());
+  const [loading, setLoading] = useState(() => readCachedSiteData() === null);
+
+  useEffect(() => {
+    let active = true;
+    fetchPublicSiteData()
+      .then((fresh) => {
+        if (active) setData(fresh);
+      })
+      .catch(() => {
+        /* keep whatever the cache gave us; pages render their empty states */
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
   }, []);
 
   const value: PublicData = {

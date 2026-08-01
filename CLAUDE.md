@@ -57,7 +57,9 @@ analytics, so aggregation moved into `analytics_overview()` and member lists ont
 `members_overview` view with server-side search/filter/paging. App side: route-level code splitting
 (entry 677→570 KB), an error boundary, an accessible Modal, CI that runs type-check + tests on every
 branch, and **`npm run test:rls`** — a live RLS regression suite (8 checks) to run after any policy
-change. DB migrations run through `0015`; `supabase/apply_all.sql` is the one-paste bundle.
+change. **Load time (0016):** the public site fetched its content in six round trips to a database in
+`ap-northeast-1` and showed a spinner instead of the page; it is now one `public_site_data()` call,
+cached in `localStorage`, with the hero painting immediately (6 requests → 1, hero at ~185 ms). DB migrations run through `0016`; `supabase/apply_all.sql` is the one-paste bundle.
 Run tests with `npm test`, RLS checks with `npm run test:rls`.
 
 **Known follow-ups (not done):** captcha on the public forms (needs a provider key), 15% VAT on

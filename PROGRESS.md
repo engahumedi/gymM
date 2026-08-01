@@ -37,7 +37,7 @@ redesigned (editorial-athletic) and deployed to GitHub Pages.
   job, and Vitest unit tests for `lib/`.)
 - **Live Supabase project:** URL `https://hfjyaduiynigylvunnto.supabase.co` (ref
   `hfjyaduiynigylvunnto`, Postgres 17). Schema + RLS + functions + seed are already applied,
-  **migrations through `0015`** (`supabase/apply_all.sql` is the regenerated one-paste bundle).
+  **migrations through `0016`** (`supabase/apply_all.sql` is the regenerated one-paste bundle).
 - **What a new session must get from the user** (nothing secret is committed):
   1. `VITE_SUPABASE_URL` + **anon** key → create a local `.env` (gitignored) so `npm run
      dev/build` hit the live project. The anon key is client-safe (RLS protects data).
@@ -57,6 +57,34 @@ redesigned (editorial-athletic) and deployed to GitHub Pages.
 
 ## Session notes
 <!-- Append a short report after each phase: what was tested, what passed, what was fixed. -->
+
+### Marketing-site first-load time (2026-08-01) ✅
+Owner reported the public site sitting on "loading" for a long time on first open. Measured in a
+real browser, not guessed: the home page fired **six** database requests (five selects + a duplicate
+gym fetch from the brand provider) and rendered `<InlineLoading />` *in place of the page* until the
+slowest one returned — against a database in **ap-northeast-1 (Tokyo)** while the users are in Saudi
+Arabia, so each of those round trips is intercontinental.
+
+- **`0016_public_site_payload.sql`** (applied live): `public_site_data()` returns gym + plans +
+  branches + trainers + site content as one `jsonb` document (9 KB), SECURITY INVOKER over the same
+  anon-readable tables — no new access.
+- **App:** `PublicDataProvider` and `BrandProvider` now share a single in-flight request; the payload
+  is cached in `localStorage` (stale-while-revalidate, 24h ceiling); the home page renders its hero
+  immediately and lets each data section fill in, with a small inline loader instead of a full-page
+  one; `index.html` preconnects to the Supabase origin so DNS + TLS overlap the bundle download.
+
+**Measured before → after (headless Chromium against the production build):**
+- database requests on first paint: **6 → 1**
+- hero visible: **only after all six requests → 185 ms**
+- repeat visit (warm cache): real plan names on screen in **159 ms with no network on the path**
+- first visit while data is still loading: hero, nav, footer and login are all present and usable
+  (previously the page was a bare spinner)
+
+**Tested:** `npm run build` ✅ · `npm test` ✅ 36/36 · payload verified live (4 plans / 2 branches /
+4 trainers / 4 content blocks) · anon-callable as intended.
+
+**Note for the owner:** the remaining wait is distance — the project region cannot be changed in
+place; moving to a nearer region means a new project and a data migration. Flagged, not done.
 
 ### Security + performance + quality pass (2026-08-01) ✅
 A full review of the live system, then every finding in the critical / important / performance /

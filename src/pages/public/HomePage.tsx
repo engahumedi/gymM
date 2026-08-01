@@ -10,8 +10,9 @@ export function HomePage() {
   const { t, locale } = useI18n();
   const { gym, plans, branches, trainers, content, loading } = usePublicData();
 
-  if (loading) return <InlineLoading />;
-
+  // No full-page spinner: the hero is static copy from the dictionary, so it
+  // paints immediately and the data-driven sections below fill in when the
+  // (single) request lands. Every section is already conditional on its data.
   const heroTitle = pick(content.hero, 'title', locale) || (gym ? localizedName(gym, locale) : t('app.name'));
   const heroSub = pick(content.hero, 'subtitle', locale) || t('app.tagline');
   const facilities = (content.facilities?.items as { ar: string; en: string }[] | undefined) ?? [];
@@ -42,6 +43,8 @@ export function HomePage() {
           </div>
         </div>
       </section>
+
+      {loading && plans.length === 0 && <InlineLoading />}
 
       {/* Plans */}
       {plans.length > 0 && (

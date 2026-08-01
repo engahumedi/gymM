@@ -454,3 +454,28 @@ project before it was fixed, and re-tested after.
   patched 6.x — the fix is in 7.18+ — and a major router upgrade is a change to make deliberately,
   not as a side effect of `npm audit fix`. Everything else was updated to its latest compatible
   version.
+
+## Marketing-site load time (0016)
+
+- **The database is in `ap-northeast-1` (Tokyo) and the visitors are in Saudi Arabia.** That is the
+  fact everything else follows from: a round trip is expensive, so the number of them on first paint
+  is what matters, not the size of any one response. The home page was making **six** (five separate
+  selects for gym / plans / branches / trainers / content, plus a second gym fetch from the brand
+  provider) and rendering `<InlineLoading />` *instead of the page* until the slowest returned.
+- **One RPC for the whole payload** (`public_site_data`, SECURITY INVOKER over the same anon-readable
+  tables) collapses six requests into one — measured 6 → 1 in a real browser. It grants nothing a
+  direct select did not already allow.
+- **The brand provider shares that request** through a module-level in-flight promise instead of
+  fetching the gym row a second time.
+- **The page no longer waits at all.** The hero is static dictionary copy, so it paints in ~185 ms;
+  every data-driven section was already conditional on its own data, so they simply fill in when the
+  request lands. A small inline loader sits below the hero during the first load instead of a
+  full-page spinner — and a hung request can no longer hide the whole site.
+- **Stale-while-revalidate in `localStorage`** (24h ceiling): a repeat visitor sees real content in
+  ~159 ms with no network on the critical path, and the fresh copy replaces it when it arrives. The
+  ceiling exists so nobody is ever shown a months-old price, even for a moment.
+- **`preconnect` to the Supabase origin** in `index.html` so DNS + TLS to Tokyo happen while the
+  bundle is still downloading rather than after it boots.
+- **Not done, deliberately:** moving the project to a nearer region. Supabase cannot relocate an
+  existing project — it means a new project plus a data migration — so it is the owner's call, not a
+  side effect of a performance fix. Worth doing if the remaining latency still bothers users.
