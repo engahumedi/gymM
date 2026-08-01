@@ -9,6 +9,12 @@ export default {
       white: '#ffffff',
       black: '#000000',
       bg: 'var(--bg)',
+      // Public-site block system (see index.css) — additive, so the dashboard
+      // and portal palettes are untouched.
+      ground: 'var(--ground)',
+      block: 'var(--block)',
+      'block-2': 'var(--block-2)',
+      'block-line': 'var(--block-line)',
       surface: 'var(--surface)',
       'surface-2': 'var(--surface-2)',
       border: 'var(--border)',

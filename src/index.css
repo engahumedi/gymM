@@ -25,6 +25,18 @@
 
   --r: 4px;               /* single radius vocabulary, max 8px */
   --r-lg: 8px;
+
+  /* ---------------------------------------------------------------------
+     Block system (public site redesign). Additive: the editorial tokens
+     above are untouched, so the dashboard and portal keep their look while
+     the marketing pages move to a deeper OLED-leaning ground with real
+     blocks. Source: ui-ux-pro-max — Fitness/Gym -> "Vibrant & Block-based
+     + Dark Mode (OLED)".
+     --------------------------------------------------------------------- */
+  --ground: #08090b;      /* deeper than --bg: blocks need to sit ON something */
+  --block: #101317;
+  --block-2: #171b21;
+  --block-line: #23282f;
   color-scheme: dark;
 }
 
@@ -69,4 +81,55 @@ select option { background: var(--surface); color: var(--text); }
 
 @layer utilities {
   .text-balance { text-wrap: balance; }
+}
+
+/* =============================================================================
+   Public-site block system + motion
+   Motion is opt-in per element and always yields to prefers-reduced-motion
+   (ui-ux-pro-max priority 1/7: accessibility outranks decoration).
+   ============================================================================= */
+
+/* Scroll reveal: transform/opacity only — never width/height — so it stays on
+   the compositor and cannot cause layout shift. */
+.reveal {
+  opacity: 0;
+  transform: translateY(14px);
+  transition: opacity 420ms cubic-bezier(0.16, 1, 0.3, 1),
+              transform 420ms cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: opacity, transform;
+}
+.reveal[data-shown='true'] {
+  opacity: 1;
+  transform: none;
+}
+
+/* A block: hairline-bordered panel that lifts on hover (200-300ms per the
+   style guidance) without shadows, which this design language does not use. */
+.block-panel {
+  background: var(--block);
+  border: 1px solid var(--block-line);
+  border-radius: var(--r-lg);
+  transition: background-color 220ms ease, border-color 220ms ease, transform 220ms ease;
+}
+.block-panel:hover {
+  background: var(--block-2);
+  border-color: var(--border-strong);
+}
+
+/* Keyboard focus must always be visible (accessibility priority 1). */
+.focus-ring:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: var(--r);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+  .block-panel {
+    transition: none;
+  }
 }

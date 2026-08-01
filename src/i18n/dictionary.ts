@@ -458,6 +458,18 @@ export const dictionary = {
   'day.fri': { ar: 'الجمعة', en: 'Fri' },
   'day.sat': { ar: 'السبت', en: 'Sat' },
 
+  // --- public site redesign (block layout) ---
+  'pub.stat.branches': { ar: 'فرع', en: 'branches' },
+  'pub.stat.trainers': { ar: 'مدرب', en: 'trainers' },
+  'pub.stat.plans': { ar: 'باقة', en: 'plans' },
+  'pub.stat.eyebrow': { ar: 'النادي بالأرقام', en: 'The club in numbers' },
+  'pub.cta.title': { ar: 'ابدأ من اليوم', en: 'Start today' },
+  'pub.cta.body': {
+    ar: 'اختر باقتك، وسجّل في دقيقة، وادفع في الفرع. بطاقتك تكون جاهزة قبل أول حصة.',
+    en: 'Pick a plan, sign up in a minute, pay at the branch. Your card is ready before your first session.',
+  },
+  'pub.plans.featured': { ar: 'الأكثر اختياراً', en: 'Most chosen' },
+
   // Staff
   'staff.title': { ar: 'الموظفون', en: 'Staff' },
   'staff.invite': { ar: 'دعوة موظف', en: 'Invite staff' },
