@@ -564,7 +564,7 @@ export const dictionary = {
   'pwreq.err.mismatch': { ar: 'كلمتا المرور غير متطابقتين.', en: 'The passwords do not match.' },
   'pwreq.err.no_user': { ar: 'لا يوجد حساب بهذا البريد.', en: 'No account with that email.' },
   'pwreq.err.exists': { ar: 'لديك طلب معلّق بالفعل. انتظر قرار الإدارة.', en: 'You already have a pending request. Please wait for staff.' },
-  'reset.err.short': { ar: 'كلمة المرور قصيرة جداً (٦ أحرف على الأقل).', en: 'Password too short (at least 6 characters).' },
+  'reset.err.short': { ar: 'كلمة المرور قصيرة جداً (٨ أحرف على الأقل).', en: 'Password too short (at least 8 characters).' },
   // Dashboard approval queue
   'pwreq.queue': { ar: 'طلبات تغيير كلمة المرور', en: 'Password change requests' },
   'pwreq.approve': { ar: 'موافقة', en: 'Approve' },
@@ -583,7 +583,7 @@ export const dictionary = {
   'pwreq.err.rate': { ar: 'طلبات كثيرة. حاول لاحقاً.', en: 'Too many requests. Try again later.' },
   'profile.card': { ar: 'بطاقة العضوية', en: 'Membership card' },
   'profile.set_password': { ar: 'تعيين كلمة مرور', en: 'Set password' },
-  'profile.pw_hint': { ar: 'اكتب كلمة مرور جديدة للعضو (٦ أحرف على الأقل) وسلّمها له.', en: 'Type a new password for the member (min 6 chars) and hand it over.' },
+  'profile.pw_hint': { ar: 'اكتب كلمة مرور جديدة للعضو (٨ أحرف على الأقل) وسلّمها له.', en: 'Type a new password for the member (min 8 chars) and hand it over.' },
   'profile.pw_done': { ar: 'تم تعيين كلمة المرور. سلّمها للعضو.', en: 'Password set. Give it to the member.' },
   'portal.qr.card': { ar: 'عرض/طباعة البطاقة', en: 'View / print card' },
   'card.title': { ar: 'بطاقة عضوية', en: 'Membership card' },
@@ -652,14 +652,6 @@ export const dictionary = {
     ar: 'لديك طلب تجديد قيد المراجعة — لا يمكن إرسال طلب آخر حتى يُفعَّل.',
     en: 'You already have a renewal request pending — you cannot send another until it is activated.',
   },
-
-  'day.sun': { ar: 'أحد', en: 'Sun' },
-  'day.mon': { ar: 'اثنين', en: 'Mon' },
-  'day.tue': { ar: 'ثلاثاء', en: 'Tue' },
-  'day.wed': { ar: 'أربعاء', en: 'Wed' },
-  'day.thu': { ar: 'خميس', en: 'Thu' },
-  'day.fri': { ar: 'جمعة', en: 'Fri' },
-  'day.sat': { ar: 'سبت', en: 'Sat' },
 } as const;
 
 export type MessageKey = keyof typeof dictionary;

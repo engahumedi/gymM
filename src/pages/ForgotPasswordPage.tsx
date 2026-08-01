@@ -11,18 +11,19 @@ import { Field, TextInput } from '@/components/ui/Field';
 import { Button } from '@/components/ui/Button';
 import { ErrorText } from '@/components/ui/misc';
 
+// Minimum 8 characters — same rule the server enforces (migration 0014).
 const schema = z.object({
   email: z.string().email(),
-  password: z.string().min(6),
+  password: z.string().min(8),
 });
 
 // Map the RPC's coded errors to localized messages (this form owns its wording).
+// `request_password_change` is deliberately silent about unknown emails, stale
+// pending requests and rate limits, so the only error it still raises is about
+// the caller's own input.
 function errorKey(raw: string): MessageKey {
   const m = raw.toLowerCase();
-  if (m.includes('user_not_found')) return 'pwreq.err.no_user';
-  if (m.includes('weak_password')) return 'reset.err.short';
-  if (m.includes('request_exists')) return 'pwreq.err.exists';
-  if (m.includes('rate_limited')) return 'pwreq.err.rate';
+  if (m.includes('weak_password')) return 'err.weak_password';
   return 'err.generic';
 }
 
@@ -64,7 +65,8 @@ export function ForgotPasswordPage() {
 
         {sent ? (
           <div className="space-y-5">
-            <p className="border-s-2 border-good bg-surface-2 px-3 py-3 text-sm text-text">{t('pwreq.sent')}</p>
+            {/* Neutral by design: never confirm or deny that the email exists. */}
+            <p className="border-s-2 border-good bg-surface-2 px-3 py-3 text-sm text-text">{t('pwreq.submitted')}</p>
             <Link to="/login" className="inline-block text-sm text-muted hover:text-text">{t('forgot.back_login')}</Link>
           </div>
         ) : (

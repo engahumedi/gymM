@@ -18,7 +18,7 @@ redesigned (editorial-athletic) and deployed to GitHub Pages.
 ## Handoff — read this first in a new session
 
 - **Repo layout:** `main` holds the merged history. Continue development on branch
-  **`claude/gym-system-context-setup-h0pqfe`**. Docs live at the repo root: `SPEC.md`,
+  **`claude/gym-system-context-setup-ezbbxk`**. Docs live at the repo root: `SPEC.md`,
   `CLAUDE.md`, `PROGRESS.md`, `DECISIONS.md`, `README.md`.
 - **Status:** all 8 phases + post-launch tweaks + the full **white-label Settings screen**
   (Identity / Branches / Staff invites / Site content) are done and verified live. The UI
@@ -27,14 +27,17 @@ redesigned (editorial-athletic) and deployed to GitHub Pages.
   ON** (enabled on this project via the Management API). For a fresh project, turn off "Confirm
   email" in Auth settings so sign-ups get an immediate session.
 - **Possible next work** (owner-facing suggestions, not started): real WhatsApp/SMS send (deploy
-  the `notify` Edge Function), 15% VAT on receipts, cross-branch check-in for all-branch plans, and
-  captcha on the public forms (needs a provider key). (Done already: white-label Settings, runtime
+  the `notify` Edge Function), 15% VAT on receipts, cross-branch check-in for all-branch plans,
+  captcha on the public forms (needs a provider key), SEO/prerender for the marketing pages, and a
+  deliberate react-router 7 upgrade.
+- **After any migration touching policies, helpers or grants, run `npm run test:rls`** — it signs in
+  as the demo accounts and asserts what each role can and cannot reach against the live project. (Done already: white-label Settings, runtime
   brand colors/logo, CSV member import, member QR + reception scan check-in, password reset by
   request→staff approval, staff-set password, printable membership card, audit log, pg_cron expiry
   job, and Vitest unit tests for `lib/`.)
 - **Live Supabase project:** URL `https://hfjyaduiynigylvunnto.supabase.co` (ref
   `hfjyaduiynigylvunnto`, Postgres 17). Schema + RLS + functions + seed are already applied,
-  **migrations through `0013`** (`supabase/apply_all.sql` is the regenerated one-paste bundle).
+  **migrations through `0015`** (`supabase/apply_all.sql` is the regenerated one-paste bundle).
 - **What a new session must get from the user** (nothing secret is committed):
   1. `VITE_SUPABASE_URL` + **anon** key → create a local `.env` (gitignored) so `npm run
      dev/build` hit the live project. The anon key is client-safe (RLS protects data).
@@ -54,6 +57,48 @@ redesigned (editorial-athletic) and deployed to GitHub Pages.
 
 ## Session notes
 <!-- Append a short report after each phase: what was tested, what passed, what was fixed. -->
+
+### Security + performance + quality pass (2026-08-01) ✅
+A full review of the live system, then every finding in the critical / important / performance /
+code-quality tiers fixed and re-verified. Migrations **0014** (security) and **0015** (analytics +
+indexes) are applied live; `supabase/apply_all.sql` regenerated.
+
+**Critical (all reproduced live before the fix):**
+- **Privilege escalation** — `profiles_self_update` had no column restriction, so a member could
+  `PATCH` its own row to `role = 'super_admin'`: verified live going from 1 visible member to all
+  50 plus payments and the audit log. Fixed with a BEFORE UPDATE trigger (SECURITY INVOKER, so the
+  DEFINER RPCs still work); role/branch changes are now audited. Re-tested: `forbidden_privilege_change`,
+  role unchanged, `public_join` and staff branch reassignment both still work.
+- **PostgREST `max_rows = 1000`** silently truncated the analytics fetch (`.limit(5000)`), so
+  check-in reporting would have gone quietly wrong past ~1000 visits. Aggregation moved into
+  `analytics_overview()`; cross-checked against direct SQL (303/303 check-ins, 21,100 revenue,
+  26 active / 8 expiring / 19 expired) and confirmed RLS-scoped (reception sees 25 / 146, not 50 / 303).
+- **Member photos** were readable and listable by *any* authenticated user; now staff + the owner.
+
+**Important:** maintenance/audit RPCs revoked from `PUBLIC` (Postgres grants EXECUTE there by
+default, so "granted to authenticated" was never the whole story — a member could forge audit
+entries); password requests no longer leak whether an email exists and can no longer be parked on a
+victim's account; check-in is idempotent within an hour (`checkin_duplicate`) and a scanned QR now
+requires a human confirmation instead of checking in on sight; members get one pending renewal,
+priced by the gym; staff invites need a secret token + 7-day expiry (tested all three paths: no
+token → member, valid → reception at the invited branch, expired → member); password minimum 8 in
+both the RPCs and the GoTrue config.
+
+**Performance:** `members_overview` (security_invoker view) + server-side search/filter/paging
+replaced `fetchMembers()` on five screens; dashboard KPIs use `head:true` counts; member profile
+went from 7 round trips to 1; payments paginate; new indexes incl. pg_trgm for search. Entry bundle
+677 KB → 570 KB (186 → 162 KB gzip) by lazy-loading the dashboard/portal trees.
+
+**Quality:** error boundary (no more white screens), Modal made accessible (role/aria/focus trap/
+scroll lock), `errors.ts` covers the new server codes, `index.html` de-branded with `document.title`
++ favicon driven by the `gyms` row, CI now runs type-check + tests on every branch and before deploy,
+and **`npm run test:rls`** (new) asserts the policies against the live project — 8/8 passing,
+including the escalation attempt. All 25 `as never` casts removed by fixing their root cause
+(schema types declared as `interface` instead of `type`), which surfaced two real type defects.
+
+**Tested:** `npm run build` ✅ · `npm test` ✅ 36/36 · `npm run test:rls` ✅ 8/8 · live data-layer
+checks listed above. All test rows removed afterwards — seed intact (50 members / 303 check-ins /
+57 payments / 4 accounts / 0 invites).
 
 ### Hardening + staff password reset + card + audit + cron + tests (2026-07-13) ✅
 Six additions (`0012`, `0013` migrations):

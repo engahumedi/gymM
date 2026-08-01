@@ -416,3 +416,41 @@ project before it was fixed, and re-tested after.
   `notifications(gym_id)`, `check_ins(branch_id, checked_in_at)`, `subscriptions(member_id, status)`,
   `members(gym_id, created_at)`, plus **pg_trgm** GIN indexes on `members.full_name` / `phone` so the
   `ilike` search stays fast as the member table grows.
+
+### App layer (same pass)
+
+- **The `as never` casts were a symptom, not a necessity.** Every write and RPC argument in
+  `api.ts` was cast because supabase-js collapsed `Insert`/`Update` to `never`. The actual cause:
+  the schema types were declared as `interface`s, and a TypeScript `interface` — unlike a `type`
+  alias — has no implicit index signature, so it never satisfies postgrest-js's
+  `Record<string, unknown>` constraint and the whole schema silently degrades. Converting the 18
+  domain types to object type aliases restored real typing and removed all 25 casts; the compiler
+  immediately caught two genuine defects (a `string` where `Gender` was required in the CSV import,
+  and `''` passed as a status filter). Every RPC is now declared in `Database['public']['Functions']`
+  and `rpcCall` is keyed by function name, so arguments and return types are checked at compile
+  time. The only assertions left are on embedded selects (`payments(*, members(...))`), where the
+  hand-written schema carries no foreign-key metadata for postgrest-js to resolve — hand-writing
+  that metadata is a lot of boilerplate for no runtime gain.
+
+- **Code splitting follows the audience, not the file tree.** The public marketing site is the page
+  a stranger loads first, and it was shipping the entire admin app. Dashboard, portal, settings,
+  receipt and card routes are now lazy; public pages, login, join, forgot-password and staff-signup
+  stay eager because they *are* the first paint. Entry bundle 677 KB → 570 KB (186 → 162 KB gzip).
+
+- **An error boundary that does not depend on the router.** It renders both above `RouterProvider`
+  and as each route's `errorElement`, so a crash anywhere shows a localized recovery screen instead
+  of a white page. Both actions reload rather than navigate: a crashed React tree keeps its broken
+  state, so an in-place route change can land straight back in the error.
+
+- **CI now runs the tests that already existed.** A separate `ci.yml` (every branch + PRs) runs
+  type-check, unit tests and build; `deploy.yml` gained the same gates before it publishes, so a red
+  test cannot reach Pages. The RLS suite (`npm run test:rls`) is deliberately *not* in CI — it needs
+  a live project and CI holds no secrets — but it is the one suite that would have caught the
+  escalation hole, so it is a documented pre/post-migration step.
+
+- **react-router stays on 6.30.4 despite the audit warning.** GHSA-337j-9hxr-rhxg is an SSR
+  hydration issue in `deserializeErrors()`; this app is a client-only hash-routed SPA with no
+  server rendering and no `hydrationData`, so the vulnerable path is unreachable. There is no
+  patched 6.x — the fix is in 7.18+ — and a major router upgrade is a change to make deliberately,
+  not as a side effect of `npm audit fix`. Everything else was updated to its latest compatible
+  version.

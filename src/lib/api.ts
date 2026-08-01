@@ -2,30 +2,43 @@ import { supabase } from './supabase';
 import type {
   Branch,
   CheckIn,
+  Database,
   Freeze,
   Gym,
   Member,
+  MemberDisplayStatus,
+  MemberOverview,
   Payment,
   PaymentMethod,
   Plan,
   Subscription,
 } from './database.types';
 
+export type { MemberOverview, MemberDisplayStatus };
+
 // Thin, typed data-access layer. Every call goes through RLS on the server;
 // these helpers just keep query shapes in one place.
+//
+// Writes and RPCs are fully type-checked against `Database` (the schema types
+// are object type aliases, not interfaces — interfaces lack an implicit index
+// signature, which made postgrest-js collapse every Insert/Update to `never`
+// and forced the `as never` casts this file used to carry). The only remaining
+// assertions are on embedded selects, where the schema type declares no foreign
+// key metadata for postgrest-js to resolve.
 
 function unwrap<T>(res: { data: T | null; error: { message: string } | null }): T {
   if (res.error) throw new Error(res.error.message);
   return res.data as T;
 }
 
-// supabase-js generics reject our hand-written Insert/RPC arg types; the runtime
-// is unaffected, so we cast just the write/RPC arguments and keep return types.
-async function rpcCall<T>(name: string, args: Record<string, unknown>): Promise<T> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase.rpc as any)(name, args);
-  if (error) throw new Error((error as { message: string }).message);
-  return data as T;
+// RPC name -> { Args, Returns } from the schema type, so both the arguments and
+// the result of every RPC are checked at compile time.
+type Fn = Database['public']['Functions'];
+
+async function rpcCall<K extends keyof Fn>(name: K, args: Fn[K]['Args']): Promise<Fn[K]['Returns']> {
+  const { data, error } = await supabase.rpc(name, args);
+  if (error) throw new Error(error.message);
+  return data as Fn[K]['Returns'];
 }
 
 // ---- Reference data -------------------------------------------------------
@@ -44,18 +57,103 @@ export async function fetchPlans(activeOnly = false): Promise<Plan[]> {
 }
 
 // ---- Members --------------------------------------------------------------
-export interface MemberListItem extends Member {
-  subscriptions: Subscription[];
+// Every member list reads the RLS-scoped `members_overview` view (member +
+// current subscription + display status), so search / filter / paging happen on
+// the server. PostgREST caps any response at 1000 rows, so unbounded selects
+// silently truncate — always page.
+
+export const DEFAULT_PAGE_SIZE = 25;
+
+// PostgREST parses `or=(…)` as a comma/paren separated list and treats `*` / `%`
+// as ilike wildcards, so those characters in user input would change the query
+// itself. None of them are meaningful in a name, phone or member code.
+function escapeSearch(raw: string): string {
+  return raw.replace(/[,()*%"\\]/g, ' ').replace(/\s+/g, ' ').trim();
 }
 
-export async function fetchMembers(): Promise<MemberListItem[]> {
-  // RLS scopes rows to the caller's role/branch automatically.
-  return unwrap(
-    await supabase
-      .from('members')
-      .select('*, subscriptions(*)')
-      .order('created_at', { ascending: false }),
-  ) as unknown as MemberListItem[];
+function searchFilter(term: string): string {
+  return `full_name.ilike.*${term}*,phone.ilike.*${term}*,member_code.ilike.*${term}*`;
+}
+
+export interface MembersPageOptions {
+  search?: string;
+  status?: MemberDisplayStatus;
+  branchId?: string;
+  limit?: number;
+  offset?: number;
+}
+
+export interface Page<T> {
+  rows: T[];
+  total: number;
+}
+
+export async function fetchMembersPage(opts: MembersPageOptions = {}): Promise<Page<MemberOverview>> {
+  const limit = opts.limit ?? DEFAULT_PAGE_SIZE;
+  const offset = opts.offset ?? 0;
+  let q = supabase.from('members_overview').select('*', { count: 'exact' });
+
+  const term = escapeSearch(opts.search ?? '');
+  if (term) q = q.or(searchFilter(term));
+  if (opts.status) q = q.eq('display_status', opts.status);
+  if (opts.branchId) q = q.eq('branch_id', opts.branchId);
+
+  const { data, error, count } = await q
+    .order('created_at', { ascending: false })
+    .range(offset, offset + limit - 1);
+  if (error) throw new Error(error.message);
+  return { rows: data ?? [], total: count ?? 0 };
+}
+
+// Statuses the dashboard KPIs / alert lists are built from.
+export const DASHBOARD_STATUSES: MemberDisplayStatus[] = ['active', 'expiring', 'expired', 'pending'];
+
+// One `head: true` count per status (+ the grand total). No rows are
+// transferred — the server just returns Content-Range.
+export async function fetchMemberCounts(branchId?: string): Promise<Record<string, number>> {
+  async function countOf(status?: MemberDisplayStatus): Promise<number> {
+    let q = supabase.from('members_overview').select('id', { head: true, count: 'exact' });
+    if (status) q = q.eq('display_status', status);
+    if (branchId) q = q.eq('branch_id', branchId);
+    const { count, error } = await q;
+    if (error) throw new Error(error.message);
+    return count ?? 0;
+  }
+
+  const [total, ...counts] = await Promise.all([
+    countOf(),
+    ...DASHBOARD_STATUSES.map((s) => countOf(s)),
+  ]);
+  const out: Record<string, number> = { total };
+  DASHBOARD_STATUSES.forEach((s, i) => { out[s] = counts[i]; });
+  return out;
+}
+
+// Type-ahead picker for the check-in screen and the payment modal.
+export async function searchMembersQuick(q: string, limit = 8): Promise<MemberOverview[]> {
+  const term = escapeSearch(q);
+  if (!term) return [];
+  const { data, error } = await supabase
+    .from('members_overview')
+    .select('*')
+    .or(searchFilter(term))
+    .order('full_name')
+    .limit(limit);
+  if (error) throw new Error(error.message);
+  return data ?? [];
+}
+
+// QR scans carry the member_code; resolve it server-side (RLS-scoped).
+export async function findMemberByCode(code: string): Promise<MemberOverview | null> {
+  const clean = code.trim();
+  if (!clean) return null;
+  const { data, error } = await supabase
+    .from('members_overview')
+    .select('*')
+    .eq('member_code', clean)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return data ?? null;
 }
 
 export async function fetchMember(id: string): Promise<Member> {
@@ -68,7 +166,7 @@ export interface MemberInsert {
   full_name: string;
   phone: string;
   national_id?: string | null;
-  gender?: string | null;
+  gender?: Gender | null;
   dob?: string | null;
   photo_url?: string | null;
   emergency_contact_name?: string | null;
@@ -77,14 +175,14 @@ export interface MemberInsert {
 }
 
 export async function createMember(payload: MemberInsert): Promise<Member> {
-  return unwrap(await supabase.from('members').insert(payload as never).select().single());
+  return unwrap(await supabase.from('members').insert(payload).select().single());
 }
 
 export async function updateMember(
   id: string,
   patch: Partial<MemberInsert> & { photo_url?: string | null },
 ): Promise<Member> {
-  return unwrap(await supabase.from('members').update(patch as never).eq('id', id).select().single());
+  return unwrap(await supabase.from('members').update(patch).eq('id', id).select().single());
 }
 
 // ---- Member history -------------------------------------------------------
@@ -119,16 +217,71 @@ export async function fetchCheckIns(memberId: string): Promise<CheckIn[]> {
   );
 }
 
-export async function fetchFreezes(memberId: string): Promise<Freeze[]> {
-  const subs = await fetchSubscriptions(memberId);
-  if (subs.length === 0) return [];
-  return unwrap(
-    await supabase
-      .from('freezes')
-      .select('*')
-      .in('subscription_id', subs.map((s) => s.id))
-      .order('created_at', { ascending: false }),
-  );
+// The whole member profile in ONE round trip: member + subscriptions (with
+// their freezes) + payments + the latest check-ins. Replaces six parallel
+// queries (one of which was itself two round trips).
+export interface MemberProfileData {
+  member: Member;
+  subscriptions: Subscription[];
+  payments: Payment[];
+  checkIns: CheckIn[];
+  freezes: Freeze[];
+}
+
+type SubscriptionWithFreezes = Subscription & { freezes: Freeze[] | null };
+type MemberProfileRow = Member & {
+  subscriptions: SubscriptionWithFreezes[] | null;
+  payments: Payment[] | null;
+  check_ins: CheckIn[] | null;
+};
+
+const CHECKIN_HISTORY_LIMIT = 100;
+
+export async function fetchMemberProfile(id: string): Promise<MemberProfileData> {
+  const { data, error } = await supabase
+    .from('members')
+    .select('*, subscriptions(*, freezes(*)), payments(*), check_ins(*)')
+    .eq('id', id)
+    .order('created_at', { ascending: false, referencedTable: 'subscriptions' })
+    .order('created_at', { ascending: false, referencedTable: 'payments' })
+    .order('checked_in_at', { ascending: false, referencedTable: 'check_ins' })
+    .limit(CHECKIN_HISTORY_LIMIT, { referencedTable: 'check_ins' })
+    .single();
+  if (error) throw new Error(error.message);
+
+  const row = data as unknown as MemberProfileRow;
+  const nested = row.subscriptions ?? [];
+  // Freezes arrive nested under their subscription; the history tab wants one
+  // flat, newest-first list (small arrays — sorting here avoids a second query).
+  const freezes = nested
+    .flatMap((s) => s.freezes ?? [])
+    .sort((a, b) => (b.created_at ?? '').localeCompare(a.created_at ?? ''));
+
+  const member: Member = {
+    id: row.id,
+    gym_id: row.gym_id,
+    branch_id: row.branch_id,
+    member_code: row.member_code,
+    full_name: row.full_name,
+    phone: row.phone,
+    national_id: row.national_id,
+    gender: row.gender,
+    dob: row.dob,
+    photo_url: row.photo_url,
+    emergency_contact_name: row.emergency_contact_name,
+    emergency_contact_phone: row.emergency_contact_phone,
+    notes: row.notes,
+    user_id: row.user_id,
+    created_at: row.created_at,
+  };
+
+  return {
+    member,
+    subscriptions: nested.map(({ freezes: _nestedFreezes, ...s }) => s),
+    payments: row.payments ?? [],
+    checkIns: row.check_ins ?? [],
+    freezes,
+  };
 }
 
 // ---- Subscription lifecycle (RPCs) ---------------------------------------
@@ -145,7 +298,7 @@ export async function createSubscription(
   activate: boolean,
   pay?: PaymentInput,
 ): Promise<Subscription> {
-  return rpcCall<Subscription>('create_subscription', {
+  return rpcCall('create_subscription', {
     p_member_id: memberId,
     p_plan_id: planId,
     p_branch_id: branchId,
@@ -157,7 +310,7 @@ export async function createSubscription(
 }
 
 export async function activateSubscription(id: string, pay?: PaymentInput): Promise<Subscription> {
-  return rpcCall<Subscription>('activate_subscription', {
+  return rpcCall('activate_subscription', {
     p_subscription_id: id,
     p_amount: pay?.amount ?? null,
     p_method: pay?.method ?? 'cash',
@@ -166,7 +319,7 @@ export async function activateSubscription(id: string, pay?: PaymentInput): Prom
 }
 
 export async function renewSubscription(id: string, pay?: PaymentInput): Promise<Subscription> {
-  return rpcCall<Subscription>('renew_subscription', {
+  return rpcCall('renew_subscription', {
     p_subscription_id: id,
     p_amount: pay?.amount ?? null,
     p_method: pay?.method ?? 'cash',
@@ -175,15 +328,15 @@ export async function renewSubscription(id: string, pay?: PaymentInput): Promise
 }
 
 export async function freezeSubscription(id: string, days: number): Promise<Subscription> {
-  return rpcCall<Subscription>('freeze_subscription', { p_subscription_id: id, p_days: days });
+  return rpcCall('freeze_subscription', { p_subscription_id: id, p_days: days });
 }
 
 export async function unfreezeSubscription(id: string): Promise<Subscription> {
-  return rpcCall<Subscription>('unfreeze_subscription', { p_subscription_id: id });
+  return rpcCall('unfreeze_subscription', { p_subscription_id: id });
 }
 
 export async function upgradeQuote(id: string, newPlanId: string): Promise<number> {
-  return rpcCall<number>('upgrade_quote', { p_subscription_id: id, p_new_plan_id: newPlanId });
+  return rpcCall('upgrade_quote', { p_subscription_id: id, p_new_plan_id: newPlanId });
 }
 
 export async function upgradeSubscription(
@@ -191,7 +344,7 @@ export async function upgradeSubscription(
   newPlanId: string,
   pay?: PaymentInput,
 ): Promise<Subscription> {
-  return rpcCall<Subscription>('upgrade_subscription', {
+  return rpcCall('upgrade_subscription', {
     p_subscription_id: id,
     p_new_plan_id: newPlanId,
     p_amount: pay?.amount ?? null,
@@ -202,7 +355,7 @@ export async function upgradeSubscription(
 
 // ---- Check-in + payments (Phase 4) ---------------------------------------
 export async function recordCheckIn(memberId: string, branchId: string): Promise<CheckIn> {
-  return rpcCall<CheckIn>('record_check_in', { p_member_id: memberId, p_branch_id: branchId });
+  return rpcCall('record_check_in', { p_member_id: memberId, p_branch_id: branchId });
 }
 
 export async function recordPayment(
@@ -212,7 +365,7 @@ export async function recordPayment(
   method: PaymentMethod,
   receipt: string | null,
 ): Promise<Payment> {
-  return rpcCall<Payment>('record_payment', {
+  return rpcCall('record_payment', {
     p_member_id: memberId,
     p_subscription_id: subscriptionId,
     p_amount: amount,
@@ -226,14 +379,20 @@ export interface PaymentWithMember extends Payment {
   members: { full_name: string; member_code: string | null } | null;
 }
 
-export async function fetchAllPayments(): Promise<PaymentWithMember[]> {
-  return unwrap(
-    await supabase
-      .from('payments')
-      .select('*, members(full_name, member_code)')
-      .order('created_at', { ascending: false })
-      .limit(200),
-  ) as unknown as PaymentWithMember[];
+export async function fetchPaymentsPage(
+  opts: { limit?: number; offset?: number } = {},
+): Promise<Page<PaymentWithMember>> {
+  const limit = opts.limit ?? DEFAULT_PAGE_SIZE;
+  const offset = opts.offset ?? 0;
+  const { data, error, count } = await supabase
+    .from('payments')
+    .select('*, members(full_name, member_code)', { count: 'exact' })
+    .order('created_at', { ascending: false })
+    .range(offset, offset + limit - 1);
+  if (error) throw new Error(error.message);
+  // Embedded selects need the assertion: the schema type declares no FK
+  // metadata, so postgrest-js cannot resolve `members(...)` on its own.
+  return { rows: (data ?? []) as unknown as PaymentWithMember[], total: count ?? 0 };
 }
 
 export async function fetchPaymentWithMember(id: string): Promise<PaymentWithMember> {
@@ -246,15 +405,79 @@ export async function fetchPaymentWithMember(id: string): Promise<PaymentWithMem
   ) as unknown as PaymentWithMember;
 }
 
-// All check-ins within scope (for analytics: heatmap, trends). RLS-scoped.
-export async function fetchAllCheckIns(): Promise<CheckIn[]> {
-  return unwrap(
-    await supabase
-      .from('check_ins')
-      .select('id, member_id, branch_id, subscription_id, checked_in_at, recorded_by')
-      .order('checked_in_at', { ascending: false })
-      .limit(5000),
-  );
+// ---- Analytics (aggregated in SQL) ---------------------------------------
+// One RPC replaces "download every member / payment / check-in and aggregate in
+// JS" — which silently truncated at PostgREST's 1000-row cap.
+export interface AnalyticsKpis {
+  active: number;
+  expiring: number;
+  expired: number;
+  total_members: number;
+  new_month: number;
+  revenue_month: number;
+  renewal_rate: number;
+  churn_rate: number;
+}
+
+export interface RevenueMonth {
+  month: string;
+  total: number;
+  branches: Record<string, number>;
+}
+
+export interface GrowthPoint { month: string; count: number }
+export interface PlanCount { plan_id: string; count: number }
+export interface HeatCell { dow: number; hour: number; count: number }
+
+export interface AnalyticsOverview {
+  kpis: AnalyticsKpis;
+  revenue_by_month: RevenueMonth[];
+  member_growth: GrowthPoint[];
+  plan_popularity: PlanCount[];
+  heatmap: HeatCell[];
+}
+
+// Postgres numerics come back as JSON strings often enough to be worth one cast.
+function num(v: unknown): number {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : 0;
+}
+
+export async function fetchAnalyticsOverview(
+  from: string,
+  to: string,
+  branchId: string | null,
+): Promise<AnalyticsOverview> {
+  const raw = await rpcCall('analytics_overview', {
+    p_from: from,
+    p_to: to,
+    p_branch: branchId,
+  });
+  const k = raw?.kpis ?? {};
+  return {
+    kpis: {
+      active: num(k.active),
+      expiring: num(k.expiring),
+      expired: num(k.expired),
+      total_members: num(k.total_members),
+      new_month: num(k.new_month),
+      revenue_month: num(k.revenue_month),
+      renewal_rate: num(k.renewal_rate),
+      churn_rate: num(k.churn_rate),
+    },
+    revenue_by_month: (raw?.revenue_by_month ?? []).map((r) => ({
+      month: r.month ?? '',
+      total: num(r.total),
+      branches: Object.fromEntries(
+        Object.entries(r.branches ?? {}).map(([id, v]) => [id, num(v)]),
+      ),
+    })),
+    member_growth: (raw?.member_growth ?? []).map((r) => ({ month: r.month ?? '', count: num(r.count) })),
+    plan_popularity: (raw?.plan_popularity ?? [])
+      .filter((r): r is { plan_id: string; count: unknown } => Boolean(r.plan_id))
+      .map((r) => ({ plan_id: r.plan_id, count: num(r.count) })),
+    heatmap: (raw?.heatmap ?? []).map((r) => ({ dow: num(r.dow), hour: num(r.hour), count: num(r.count) })),
+  };
 }
 
 // Today's check-ins at the current scope (for the check-in screen feed).
@@ -279,7 +502,7 @@ export async function fetchTodayCheckIns(): Promise<CheckInWithMember[]> {
 import type { FreezeRequest } from './database.types';
 
 export async function requestFreeze(subscriptionId: string, days: number, note: string | null): Promise<FreezeRequest> {
-  return rpcCall<FreezeRequest>('request_freeze', { p_subscription_id: subscriptionId, p_days: days, p_note: note });
+  return rpcCall('request_freeze', { p_subscription_id: subscriptionId, p_days: days, p_note: note });
 }
 
 export async function fetchMyFreezeRequests(): Promise<FreezeRequest[]> {
@@ -303,11 +526,11 @@ export async function fetchPendingFreezeRequests(): Promise<FreezeRequestWithMem
 }
 
 export async function approveFreezeRequest(id: string): Promise<FreezeRequest> {
-  return rpcCall<FreezeRequest>('approve_freeze_request', { p_request_id: id });
+  return rpcCall('approve_freeze_request', { p_request_id: id });
 }
 
 export async function rejectFreezeRequest(id: string): Promise<FreezeRequest> {
-  return rpcCall<FreezeRequest>('reject_freeze_request', { p_request_id: id });
+  return rpcCall('reject_freeze_request', { p_request_id: id });
 }
 
 // ---- Public site content (Phase 7) ---------------------------------------
@@ -348,7 +571,7 @@ export async function signUpAndJoin(params: {
   });
   if (signErr) throw new Error(signErr.message);
   // autoconfirm is on, so a session is active now — call the join RPC.
-  return rpcCall<string>('public_join', {
+  return rpcCall('public_join', {
     p_full_name: params.fullName,
     p_phone: params.phone,
     p_national_id: params.nationalId,
@@ -373,7 +596,7 @@ export async function fetchMyNotifications(): Promise<Notification[]> {
 export async function markNotificationRead(id: string): Promise<void> {
   const { error } = await supabase
     .from('notifications')
-    .update({ status: 'read', read_at: new Date().toISOString() } as never)
+    .update({ status: 'read', read_at: new Date().toISOString() })
     .eq('id', id);
   if (error) throw new Error(error.message);
 }
@@ -418,11 +641,11 @@ export async function signedPhotoUrl(path: string | null): Promise<string | null
 export type PlanInput = Omit<Plan, 'id' | 'created_at'>;
 
 export async function createPlan(payload: PlanInput): Promise<Plan> {
-  return unwrap(await supabase.from('plans').insert(payload as never).select().single());
+  return unwrap(await supabase.from('plans').insert(payload).select().single());
 }
 
 export async function updatePlan(id: string, patch: Partial<PlanInput>): Promise<Plan> {
-  return unwrap(await supabase.from('plans').update(patch as never).eq('id', id).select().single());
+  return unwrap(await supabase.from('plans').update(patch).eq('id', id).select().single());
 }
 
 // ---- Settings: gym identity (super-admin) ---------------------------------
@@ -441,18 +664,18 @@ export type GymPatch = Partial<
 >;
 
 export async function updateGym(id: string, patch: GymPatch): Promise<Gym> {
-  return unwrap(await supabase.from('gyms').update(patch as never).eq('id', id).select().single());
+  return unwrap(await supabase.from('gyms').update(patch).eq('id', id).select().single());
 }
 
 // ---- Settings: branches (super-admin CRUD) --------------------------------
 export type BranchInput = Omit<Branch, 'id' | 'created_at'>;
 
 export async function createBranch(payload: BranchInput): Promise<Branch> {
-  return unwrap(await supabase.from('branches').insert(payload as never).select().single());
+  return unwrap(await supabase.from('branches').insert(payload).select().single());
 }
 
 export async function updateBranch(id: string, patch: Partial<BranchInput>): Promise<Branch> {
-  return unwrap(await supabase.from('branches').update(patch as never).eq('id', id).select().single());
+  return unwrap(await supabase.from('branches').update(patch).eq('id', id).select().single());
 }
 
 // ---- Settings: trainers (super-admin CRUD) --------------------------------
@@ -464,11 +687,11 @@ export async function fetchAllTrainers(): Promise<Trainer[]> {
 }
 
 export async function createTrainer(payload: TrainerInput): Promise<Trainer> {
-  return unwrap(await supabase.from('trainers').insert(payload as never).select().single());
+  return unwrap(await supabase.from('trainers').insert(payload).select().single());
 }
 
 export async function updateTrainer(id: string, patch: Partial<TrainerInput>): Promise<Trainer> {
-  return unwrap(await supabase.from('trainers').update(patch as never).eq('id', id).select().single());
+  return unwrap(await supabase.from('trainers').update(patch).eq('id', id).select().single());
 }
 
 // ---- Settings: site content (super-admin) ---------------------------------
@@ -481,7 +704,7 @@ export async function upsertSiteContent(
   const { error } = await supabase
     .from('site_content')
     .upsert(
-      { gym_id: gymId, key, content, updated_at: new Date().toISOString() } as never,
+      { gym_id: gymId, key, content, updated_at: new Date().toISOString() },
       { onConflict: 'gym_id,key' },
     );
   if (error) throw new Error(error.message);
@@ -537,7 +760,7 @@ export async function createStaffInvite(payload: StaffInviteInput): Promise<Staf
   return unwrap(
     await supabase
       .from('staff_invites')
-      .insert({ ...payload, role: 'reception', status: 'pending' } as never)
+      .insert({ ...payload, role: 'reception', status: 'pending' })
       .select()
       .single(),
   );
@@ -552,15 +775,25 @@ export async function deleteStaffInvite(id: string): Promise<void> {
 export async function updateStaffBranch(profileId: string, branchId: string | null): Promise<void> {
   const { error } = await supabase
     .from('profiles')
-    .update({ branch_id: branchId } as never)
+    .update({ branch_id: branchId })
     .eq('id', profileId);
   if (error) throw new Error(error.message);
 }
 
-// Sign up a staff member who was invited by email. The auth trigger promotes
-// them to the invited role/branch. Autoconfirm is on, so a session is active.
-export async function signUpStaff(email: string, password: string): Promise<void> {
-  const { error } = await supabase.auth.signUp({ email, password });
+// Sign up an invited staff member. The invite token travels as sign-up metadata
+// (the DB trigger reads raw_user_meta_data->>'invite_token') and only a token +
+// email + not-expired match promotes the new user to the invited role/branch.
+// Autoconfirm is on, so a session is active straight after.
+export async function signUpStaff(
+  email: string,
+  password: string,
+  inviteToken: string,
+): Promise<void> {
+  const { error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: { data: { invite_token: inviteToken } },
+  });
   if (error) throw new Error(error.message);
 }
 
@@ -570,7 +803,7 @@ import type { PasswordChangeRequest } from './database.types';
 // A user who forgot their password submits the new one they want; staff verify
 // identity in person and approve. Callable while signed out (anon).
 export async function requestPasswordChange(email: string, newPassword: string): Promise<void> {
-  await rpcCall<void>('request_password_change', {
+  await rpcCall('request_password_change', {
     p_email: email,
     p_new_password: newPassword,
   });
@@ -596,16 +829,16 @@ export async function fetchPendingPasswordRequests(): Promise<PasswordRequestIte
 }
 
 export async function approvePasswordChange(id: string): Promise<PasswordChangeRequest> {
-  return rpcCall<PasswordChangeRequest>('approve_password_change', { p_request_id: id });
+  return rpcCall('approve_password_change', { p_request_id: id });
 }
 
 export async function rejectPasswordChange(id: string): Promise<PasswordChangeRequest> {
-  return rpcCall<PasswordChangeRequest>('reject_password_change', { p_request_id: id });
+  return rpcCall('reject_password_change', { p_request_id: id });
 }
 
 // Staff resets a member's password on the spot (member present at the desk).
 export async function staffSetMemberPassword(memberId: string, newPassword: string): Promise<void> {
-  await rpcCall<void>('staff_set_member_password', { p_member_id: memberId, p_new_password: newPassword });
+  await rpcCall('staff_set_member_password', { p_member_id: memberId, p_new_password: newPassword });
 }
 
 // ---- Audit log (super-admin) ----------------------------------------------

@@ -25,9 +25,15 @@ function branchName(branches: Branch[], id: string | null, locale: 'ar' | 'en'):
   return b ? localizedName(b, locale) : '';
 }
 
-function staffSignupLink(email: string): string {
+// The token is the invite's only proof of ownership (email alone proves nothing
+// with autoconfirm on), so it travels in the link and must reach the invitee.
+function staffSignupLink(token: string, email: string): string {
   const base = window.location.href.split('#')[0];
-  return `${base}#/staff-signup?email=${encodeURIComponent(email)}`;
+  return `${base}#/staff-signup?token=${encodeURIComponent(token)}&email=${encodeURIComponent(email)}`;
+}
+
+function isExpired(invite: StaffInvite): boolean {
+  return Date.parse(invite.expires_at) < Date.now();
 }
 
 export function StaffSettings() {
@@ -120,10 +126,12 @@ export function StaffSettings() {
                   <tr key={inv.id} className="border-b border-border align-top">
                     <td className="px-3 py-2" dir="ltr">{inv.email}</td>
                     <td className="px-3 py-2">{branchName(branches, inv.branch_id, locale) || '—'}</td>
-                    <td className="px-3 py-2 text-warn">{t('staff.status.pending')}</td>
+                    <td className={`px-3 py-2 ${isExpired(inv) ? 'text-faint' : 'text-warn'}`}>
+                      {isExpired(inv) ? t('staff.invite.expired') : t('staff.status.pending')}
+                    </td>
                     <td className="px-3 py-2 text-end">
                       <div className="flex flex-col items-end gap-1.5">
-                        <CopyLink email={inv.email} />
+                        <CopyLink token={inv.token} email={inv.email} />
                         <button className="text-xs text-muted hover:text-accent" onClick={() => revoke(inv)}>
                           {t('staff.invite.revoke')}
                         </button>
@@ -152,12 +160,12 @@ export function StaffSettings() {
   );
 }
 
-function CopyLink({ email }: { email: string }) {
+function CopyLink({ token, email }: { token: string; email: string }) {
   const { t } = useI18n();
   const [copied, setCopied] = useState(false);
   async function copy() {
     try {
-      await navigator.clipboard.writeText(staffSignupLink(email));
+      await navigator.clipboard.writeText(staffSignupLink(token, email));
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
     } catch {
@@ -196,13 +204,13 @@ function InviteModal({
     }
     setBusy(true);
     try {
-      await createStaffInvite({
+      const invite = await createStaffInvite({
         gym_id: gymId,
         email: f.email.trim().toLowerCase(),
         full_name: f.full_name.trim() || null,
         branch_id: f.branch_id || null,
       });
-      setLink(staffSignupLink(f.email.trim().toLowerCase()));
+      setLink(staffSignupLink(invite.token, invite.email));
     } catch (err) {
       setError(t(errorMessageKey(err instanceof Error ? err.message : '')));
     } finally {
@@ -216,6 +224,7 @@ function InviteModal({
         <div className="space-y-3">
           <p className="text-sm text-muted">{t('staff.invite.link')}</p>
           <TextInput dir="ltr" readOnly value={link} onFocus={(e) => e.currentTarget.select()} />
+          <p className="text-xs text-faint">{t('staff.invite.expires')}</p>
           <Button
             onClick={() => {
               navigator.clipboard?.writeText(link).catch(() => {});

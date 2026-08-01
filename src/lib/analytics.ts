@@ -1,39 +1,59 @@
-// Pure aggregation helpers for the analytics dashboard. Small data volumes, so
-// everything is computed client-side from RLS-scoped rows.
+// Pure helpers for the analytics dashboard. All bucketing/aggregation now
+// happens in SQL (analytics_overview), so what is left here is: picking the
+// date window to ask for, and reshaping the RPC result for the charts.
+import type { HeatCell, RevenueMonth } from './api';
+
 const TZ = 'Asia/Riyadh';
 
-export function monthKey(d: Date): string {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-}
-
-// List of 'YYYY-MM' keys from `from` to `to` inclusive.
-export function monthsBetween(from: Date, to: Date): string[] {
-  const out: string[] = [];
-  const cur = new Date(from.getFullYear(), from.getMonth(), 1);
-  const end = new Date(to.getFullYear(), to.getMonth(), 1);
-  while (cur <= end) {
-    out.push(monthKey(cur));
-    cur.setMonth(cur.getMonth() + 1);
-  }
-  return out;
-}
-
-// Day-of-week (0=Sun) and hour (0-23) of a timestamp, in the gym timezone.
-export function riyadhDowHour(iso: string): { dow: number; hour: number } {
-  const parts = new Intl.DateTimeFormat('en-US', {
+// Today as 'YYYY-MM-DD' in the gym timezone (en-CA formats as ISO order).
+export function riyadhToday(now: Date = new Date()): string {
+  return new Intl.DateTimeFormat('en-CA', {
     timeZone: TZ,
-    weekday: 'short',
-    hour: 'numeric',
-    hour12: false,
-  }).formatToParts(new Date(iso));
-  const wd = parts.find((p) => p.type === 'weekday')?.value ?? 'Sun';
-  const hourStr = parts.find((p) => p.type === 'hour')?.value ?? '0';
-  const dowMap: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
-  return { dow: dowMap[wd] ?? 0, hour: Number(hourStr) % 24 };
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(now);
 }
 
-export function inRange(iso: string | null, from: Date, to: Date): boolean {
-  if (!iso) return false;
-  const t = new Date(iso).getTime();
-  return t >= from.getTime() && t <= to.getTime();
+// Start of an N-month window ending in `today`'s month: the 1st of the month
+// (N-1) months back. Plain string math, so no timezone drift.
+export function rangeStart(today: string, months: number): string {
+  const [y, m] = today.split('-').map(Number);
+  const span = Math.max(1, Math.trunc(months));
+  const index = y * 12 + (m - 1) - (span - 1);
+  const year = Math.floor(index / 12);
+  const month = (index % 12) + 1;
+  return `${String(year).padStart(4, '0')}-${String(month).padStart(2, '0')}-01`;
+}
+
+export const HEATMAP_DAYS = 7;
+export const HEATMAP_HOURS = 24;
+
+// 7×24 grid [day-of-week 0=Sun][hour 0-23] from the RPC's sparse cells.
+export function heatmapGrid(rows: HeatCell[]): number[][] {
+  const grid: number[][] = Array.from({ length: HEATMAP_DAYS }, () =>
+    Array<number>(HEATMAP_HOURS).fill(0),
+  );
+  for (const r of rows) {
+    const dow = Number(r.dow);
+    const hour = Number(r.hour);
+    if (!Number.isInteger(dow) || dow < 0 || dow >= HEATMAP_DAYS) continue;
+    if (!Number.isInteger(hour) || hour < 0 || hour >= HEATMAP_HOURS) continue;
+    grid[dow][hour] += Number(r.count) || 0;
+  }
+  return grid;
+}
+
+// Recharts wants one flat row per month with a key per series, so the nested
+// { branches: { id: amount } } map is pivoted into columns. Branches with no
+// revenue that month still get a 0 so lines stay continuous.
+export function pivotRevenue(
+  rows: RevenueMonth[],
+  branchIds: string[],
+): Record<string, string | number>[] {
+  return rows.map((r) => {
+    const out: Record<string, string | number> = { month: r.month, total: Number(r.total) || 0 };
+    for (const id of branchIds) out[id] = Number(r.branches?.[id]) || 0;
+    return out;
+  });
 }

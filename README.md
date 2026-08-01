@@ -75,6 +75,43 @@ npm run build             # type-check + production build to dist/
 If the Supabase env vars are missing, the app renders a clear "configuration missing" screen
 instead of a blank page.
 
+## Testing
+
+```bash
+npm run lint      # project-wide TypeScript type-check
+npm test          # Vitest unit tests for src/lib
+npm run build     # type-check + production build
+```
+
+`.github/workflows/ci.yml` runs all three on every push and every pull request, and the
+deploy workflow re-runs the type-check and the unit tests before it builds — a red test
+cannot reach Pages.
+
+### RLS regression tests (manual, against the live project)
+
+```bash
+npm run test:rls
+```
+
+`scripts/test-rls.mjs` (plain Node, no dependencies) signs in as the demo accounts and
+asserts the policies the entire security model rests on:
+
+- anonymous visitors can read `plans` but get **zero** rows from `members`
+- a member sees exactly its own member row and cannot read `audit_log`
+- a member cannot escalate — `PATCH profiles.role = 'super_admin'` on their own row must
+  fail and leave the role unchanged (this hole was live once; migration `0014` closed it)
+- reception sees only its own branch's members, and no audit log
+- reception cannot insert a member into another branch (expects HTTP 403)
+
+It reads `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` from the environment or from `.env`,
+prints a pass/fail line per assertion, cleans up anything it created, and exits non-zero on
+any failure. With those variables absent it skips with a message and exits 0.
+
+It runs **against the live Supabase project**, so it is deliberately **not part of CI**: CI
+holds no project credentials, and a test suite that mutates production data does not belong
+on every push. Run it locally after any migration that touches policies, RLS helper
+functions or grants.
+
 ## Deployment (GitHub Pages)
 
 Automated via `.github/workflows/deploy.yml` on every push to `main`.

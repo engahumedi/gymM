@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { Navigate, Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { z } from 'zod';
-import { isSupabaseConfigured } from '@/lib/supabase';
+import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { signUpStaff } from '@/lib/api';
 import { useAuth } from '@/auth/AuthProvider';
 import { roleHome } from '@/auth/roleHome';
@@ -13,14 +13,29 @@ import { FullPageSpinner } from '@/components/FullPageSpinner';
 import { Field, TextInput } from '@/components/ui/Field';
 import { Button } from '@/components/ui/Button';
 import { ErrorText } from '@/components/ui/misc';
+import type { Profile, UserRole } from '@/lib/database.types';
 
-const schema = z.object({ email: z.string().email(), password: z.string().min(6) });
+// Minimum 8 characters — same rule the server enforces (migration 0014).
+const schema = z.object({ email: z.string().email(), password: z.string().min(8) });
+
+// The invite token decides the new user's role; the trigger only promotes on a
+// token + email + not-expired match, so read it back before trusting the signup.
+async function currentRole(): Promise<UserRole | null> {
+  const { data: user } = await supabase.auth.getUser();
+  const id = user.user?.id;
+  if (!id) return null;
+  // The generated table types don't narrow through select(), so cast the row —
+  // same pattern the rest of the data layer uses.
+  const { data } = await supabase.from('profiles').select('*').eq('id', id).maybeSingle();
+  return (data as Profile | null)?.role ?? null;
+}
 
 export function StaffSignupPage() {
   const { t } = useI18n();
   const { session, profile, loading } = useAuth();
   const navigate = useNavigate();
   const [params] = useSearchParams();
+  const token = params.get('token') ?? '';
   const [email, setEmail] = useState(params.get('email') ?? '');
   const [password, setPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -28,18 +43,30 @@ export function StaffSignupPage() {
 
   if (!isSupabaseConfigured) return <ConfigError />;
   if (loading) return <FullPageSpinner />;
-  if (session && profile) return <Navigate to={roleHome(profile.role)} replace />;
+  // While submitting, the new session lands here before we have checked the
+  // resulting role — don't let the role redirect race the check below.
+  if (session && profile && !submitting) return <Navigate to={roleHome(profile.role)} replace />;
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
     const parsed = schema.safeParse({ email, password });
-    if (!parsed.success) return setError(t('err.email_required'));
+    if (!parsed.success) {
+      const weak = parsed.error.issues.some((i) => i.path[0] === 'password');
+      return setError(t(weak ? 'err.weak_password' : 'err.email_required'));
+    }
     setSubmitting(true);
     try {
-      await signUpStaff(parsed.data.email.trim().toLowerCase(), parsed.data.password);
-      // Autoconfirm is on: a session is active and the auth trigger has applied
-      // the invited role. Route through /login, which redirects by role.
+      await signUpStaff(parsed.data.email.trim().toLowerCase(), parsed.data.password, token);
+      // Autoconfirm is on, so a session is already active. If the invite did not
+      // apply, this account is a plain member — sign it back out rather than
+      // dropping the invitee into the member portal with a confusing "welcome".
+      const role = await currentRole();
+      if (role !== 'reception' && role !== 'super_admin') {
+        await supabase.auth.signOut();
+        throw new Error('invite_invalid');
+      }
+      // Route through /login, which redirects by role.
       navigate('/login', { replace: true });
     } catch (err) {
       setError(t(errorMessageKey(err instanceof Error ? err.message : '')));
@@ -68,20 +95,30 @@ export function StaffSignupPage() {
             <LangToggle />
           </div>
 
-          <p className="mb-6 text-sm text-muted">{t('staffsignup.desc')}</p>
+          {token ? (
+            <>
+              <p className="mb-6 text-sm text-muted">{t('staffsignup.desc')}</p>
 
-          <form onSubmit={onSubmit} className="space-y-5">
-            <Field label={t('staffsignup.email')}>
-              <TextInput type="email" autoComplete="email" dir="ltr" value={email} onChange={(e) => setEmail(e.target.value)} required />
-            </Field>
-            <Field label={t('staffsignup.password')}>
-              <TextInput type="password" autoComplete="new-password" dir="ltr" value={password} onChange={(e) => setPassword(e.target.value)} required />
-            </Field>
-            <ErrorText error={error} />
-            <Button type="submit" loading={submitting} className="w-full">
-              {t('staffsignup.submit')}
-            </Button>
-          </form>
+              <form onSubmit={onSubmit} className="space-y-5">
+                <Field label={t('staffsignup.email')}>
+                  <TextInput type="email" autoComplete="email" dir="ltr" value={email} onChange={(e) => setEmail(e.target.value)} required />
+                </Field>
+                <Field label={t('staffsignup.password')}>
+                  <TextInput type="password" autoComplete="new-password" dir="ltr" value={password} onChange={(e) => setPassword(e.target.value)} required />
+                </Field>
+                <ErrorText error={error} />
+                <Button type="submit" loading={submitting} className="w-full">
+                  {t('staffsignup.submit')}
+                </Button>
+              </form>
+            </>
+          ) : (
+            // No token in the link — signing up here would only create a plain
+            // member account, so don't offer the form at all.
+            <p className="border-s-2 border-accent bg-surface-2 px-3 py-3 text-sm text-text">
+              {t('staff.signup.no_token')}
+            </p>
+          )}
 
           <Link to="/login" className="mt-6 inline-block text-sm text-muted hover:text-text">
             {t('staffsignup.have_account')}

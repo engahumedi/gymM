@@ -1,6 +1,9 @@
 import { createContext, useContext, useEffect, type ReactNode } from 'react';
 import { fetchGym } from './api';
 import { useAsync } from './useAsync';
+import { localizedName } from './display';
+import { useI18n } from '@/i18n/I18nProvider';
+import type { Locale } from '@/i18n/dictionary';
 import type { Gym } from './database.types';
 
 interface BrandData {
@@ -24,16 +27,53 @@ export function applyBrandColors(gym: Gym | null): void {
   if (accent) document.documentElement.style.setProperty('--accent', accent);
 }
 
+// index.html is deliberately brand-free (white label), so the document title and
+// favicon are branded here instead — from the gym row, in the active language.
+// Without a gym row (or a logo) the neutral defaults from index.html stand.
+// The neutral favicon shipped in index.html, remembered on first run so that
+// clearing the logo in Settings puts it back.
+let defaultIcon: { href: string; type: string } | null = null;
+
+export function applyBrandDocument(gym: Gym | null, locale: Locale): void {
+  if (!gym) return;
+
+  const name = localizedName(gym, locale).trim();
+  if (name && name !== '—') document.title = name;
+
+  let link = document.querySelector<HTMLLinkElement>('link[rel~="icon"]');
+  if (!link) {
+    link = document.createElement('link');
+    link.rel = 'icon';
+    document.head.appendChild(link);
+  }
+  if (!defaultIcon) {
+    defaultIcon = { href: link.getAttribute('href') ?? '', type: link.getAttribute('type') ?? '' };
+  }
+
+  // An uploaded logo is an arbitrary png/jpg/svg — drop the type and let the
+  // browser sniff it; without one, restore the shipped default.
+  const logo = (gym.logo_url ?? '').trim();
+  const href = logo || defaultIcon.href;
+  if (href) link.href = href;
+  if (logo) link.removeAttribute('type');
+  else if (defaultIcon.type) link.type = defaultIcon.type;
+}
+
 // Fetches the (anon-readable) gym row once at app root, applies its brand colors,
 // and exposes it so layouts can render the logo. Kept separate from the heavier
 // PublicData/ReferenceData providers so it also covers login / reset screens.
 export function BrandProvider({ children }: { children: ReactNode }) {
+  const { locale } = useI18n();
   const { data, reload } = useAsync(fetchGym, []);
   const gym = data ?? null;
 
   useEffect(() => {
     applyBrandColors(gym);
   }, [gym]);
+
+  useEffect(() => {
+    applyBrandDocument(gym, locale);
+  }, [gym, locale]);
 
   return <Ctx.Provider value={{ gym, reload }}>{children}</Ctx.Provider>;
 }

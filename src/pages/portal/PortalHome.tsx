@@ -78,9 +78,11 @@ export function PortalHome() {
           <p className="text-sm text-muted">{t('portal.no_active_sub')}</p>
         )}
 
+        {/* Only ONE pending subscription is allowed per member (enforced by RLS),
+            so the request action is hidden while one is awaiting activation. */}
         {hasPending && (
           <p className="mt-3 border-s-2 border-sand bg-surface-2 px-3 py-2 text-sm text-text">
-            {t('portal.pending_note')}
+            {t('portal.renewal_pending')}
           </p>
         )}
         {pendingFreeze && (
@@ -89,16 +91,20 @@ export function PortalHome() {
           </p>
         )}
 
-        <div className="mt-5 flex flex-wrap items-center gap-3">
-          <Button onClick={() => setAsking(true)} disabled={hasPending}>
-            {t('portal.request_renewal')}
-          </Button>
-          {current?.status === 'active' && (
-            <Button variant="secondary" onClick={() => setFreezing(true)} disabled={Boolean(pendingFreeze)}>
-              {t('freezereq.request')}
-            </Button>
-          )}
-        </div>
+        {(!hasPending || current?.status === 'active') && (
+          <div className="mt-5 flex flex-wrap items-center gap-3">
+            {!hasPending && (
+              <Button onClick={() => setAsking(true)}>
+                {t('portal.request_renewal')}
+              </Button>
+            )}
+            {current?.status === 'active' && (
+              <Button variant="secondary" onClick={() => setFreezing(true)} disabled={Boolean(pendingFreeze)}>
+                {t('freezereq.request')}
+              </Button>
+            )}
+          </div>
+        )}
       </Card>
 
       {/* Membership QR — reception scans this to check the member in */}

@@ -1,16 +1,13 @@
 import { useI18n } from '@/i18n/I18nProvider';
+import type { MessageKey } from '@/i18n/dictionary';
 
 // Check-in heatmap: 7 days (rows) × opening hours (cols). A clean CSS grid with
 // hour ticks, day labels, and an intensity legend. Crimson accent scale.
 const HOURS = Array.from({ length: 18 }, (_, i) => i + 6); // 06:00–23:00
 const TICKS = [6, 9, 12, 15, 18, 21];
 
-const dayKeys = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'] as const;
-const dayLabels: Record<string, { ar: string; en: string }> = {
-  sun: { ar: 'أحد', en: 'Sun' }, mon: { ar: 'اثنين', en: 'Mon' }, tue: { ar: 'ثلاثاء', en: 'Tue' },
-  wed: { ar: 'أربعاء', en: 'Wed' }, thu: { ar: 'خميس', en: 'Thu' }, fri: { ar: 'جمعة', en: 'Fri' },
-  sat: { ar: 'سبت', en: 'Sat' },
-};
+// Row order matches the grid: index 0 = Sunday (same as Postgres' dow).
+const DAY_KEYS: MessageKey[] = ['day.sun', 'day.mon', 'day.tue', 'day.wed', 'day.thu', 'day.fri', 'day.sat'];
 
 function cellColor(v: number, max: number): string {
   if (v === 0) return 'var(--surface-2)';
@@ -19,12 +16,13 @@ function cellColor(v: number, max: number): string {
 }
 
 export function Heatmap({ grid }: { grid: number[][] }) {
-  const { t, locale } = useI18n();
+  const { t } = useI18n();
   const max = Math.max(1, ...grid.flat());
-  const gridCols = `2.6rem repeat(${HOURS.length}, minmax(0, 1fr))`;
+  // The label column fits the longest Arabic weekday ("الأربعاء") without clipping.
+  const gridCols = `4.2rem repeat(${HOURS.length}, minmax(0, 1fr))`;
 
   return (
-    <div dir="ltr" className="min-w-[34rem]">
+    <div dir="ltr" className="min-w-[36rem]">
       {/* Hour ticks */}
       <div className="grid items-center" style={{ gridTemplateColumns: gridCols }}>
         <span />
@@ -37,9 +35,9 @@ export function Heatmap({ grid }: { grid: number[][] }) {
 
       {/* Rows */}
       <div className="mt-1 space-y-1">
-        {dayKeys.map((dk, d) => (
+        {DAY_KEYS.map((dk, d) => (
           <div key={dk} className="grid items-center gap-1" style={{ gridTemplateColumns: gridCols }}>
-            <span className="text-[11px] text-muted">{locale === 'ar' ? dayLabels[dk].ar : dayLabels[dk].en}</span>
+            <span className="whitespace-nowrap text-[11px] text-muted">{t(dk)}</span>
             {HOURS.map((h) => {
               const v = grid[d]?.[h] ?? 0;
               return (

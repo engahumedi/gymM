@@ -5,14 +5,14 @@ import {
 } from 'recharts';
 import { useI18n } from '@/i18n/I18nProvider';
 import { useReferenceData } from '@/lib/ReferenceData';
-import { fetchAllCheckIns, fetchAllPayments, fetchMembers } from '@/lib/api';
+import { fetchAnalyticsOverview } from '@/lib/api';
 import { useAsync } from '@/lib/useAsync';
 import { localizedName } from '@/lib/display';
 import { formatCurrency } from '@/lib/format';
-import { monthKey, monthsBetween, riyadhDowHour, inRange } from '@/lib/analytics';
-import { pickCurrent, subscriptionDisplayStatus } from '@/lib/subscriptionStatus';
+import { heatmapGrid, pivotRevenue, rangeStart, riyadhToday } from '@/lib/analytics';
 import { exportCsv } from '@/lib/csv';
-import { InlineLoading, PageHeader, EmptyState } from '@/components/ui/misc';
+import { InlineLoading, PageHeader, EmptyState, ErrorText } from '@/components/ui/misc';
+import { Button } from '@/components/ui/Button';
 import { SelectInput } from '@/components/ui/Field';
 import { Download } from '@/components/ui/icons';
 import { Heatmap } from './Heatmap';
@@ -23,94 +23,47 @@ const BRANCH_COLORS = ['#2563eb', '#16a34a', '#f59e0b', '#7c3aed'];
 export function Analytics() {
   const { t, locale } = useI18n();
   const { branches, plans } = useReferenceData();
-  const members = useAsync(fetchMembers, []);
-  const payments = useAsync(fetchAllPayments, []);
-  const checkins = useAsync(fetchAllCheckIns, []);
 
   const [rangeMonths, setRangeMonths] = useState(6);
   const [branchId, setBranchId] = useState('');
 
-  const to = useMemo(() => new Date(), []);
-  const from = useMemo(() => {
-    const d = new Date();
-    d.setMonth(d.getMonth() - (rangeMonths - 1));
-    d.setDate(1);
-    d.setHours(0, 0, 0, 0);
-    return d;
-  }, [rangeMonths]);
+  const to = useMemo(() => riyadhToday(), []);
+  const from = useMemo(() => rangeStart(to, rangeMonths), [to, rangeMonths]);
 
-  const loading = members.loading || payments.loading || checkins.loading;
+  // Every aggregate is computed in SQL by analytics_overview() — one RLS-scoped
+  // round trip instead of downloading members + payments + check-ins.
+  const overview = useAsync(
+    () => fetchAnalyticsOverview(from, to, branchId || null),
+    [from, to, branchId],
+  );
+
+  const shownBranches = useMemo(
+    () => (branchId ? branches.filter((b) => b.id === branchId) : branches),
+    [branchId, branches],
+  );
 
   const data = useMemo(() => {
-    const M = (members.data ?? []).filter((m) => !branchId || m.branch_id === branchId);
-    const P = (payments.data ?? []).filter((p) => !branchId || p.branch_id === branchId);
-    const C = (checkins.data ?? []).filter((c) => !branchId || c.branch_id === branchId);
-    const thisMonth = monthKey(new Date());
-    const shownBranches = branchId ? branches.filter((b) => b.id === branchId) : branches;
-
-    // KPIs
-    const statuses = M.map((m) => subscriptionDisplayStatus(pickCurrent(m.subscriptions ?? [])));
-    const active = statuses.filter((s) => s === 'active' || s === 'expiring').length;
-    const expiring = statuses.filter((s) => s === 'expiring').length;
-    const newThisMonth = M.filter((m) => monthKey(new Date(m.created_at)) === thisMonth).length;
-    const revenueThisMonth = P.filter((p) => monthKey(new Date(p.created_at)) === thisMonth)
-      .reduce((s, p) => s + Number(p.amount), 0);
-    const withSub = M.filter((m) => (m.subscriptions ?? []).some((s) => s.status !== 'pending'));
-    const renewed = withSub.filter((m) => (m.subscriptions ?? []).filter((s) => s.status !== 'pending').length > 1);
-    const renewalRate = withSub.length ? Math.round((renewed.length / withSub.length) * 100) : 0;
-    const churned = M.filter((m) => subscriptionDisplayStatus(pickCurrent(m.subscriptions ?? [])) === 'expired');
-    const churnRate = withSub.length ? Math.round((churned.length / withSub.length) * 100) : 0;
-
-    // Revenue over time (per branch + total)
-    const months = monthsBetween(from, to);
-    const revenueSeries = months.map((mk) => {
-      const row: Record<string, string | number> = { month: mk, total: 0 };
-      for (const b of shownBranches) row[b.id] = 0;
-      for (const p of P) {
-        if (monthKey(new Date(p.created_at)) !== mk) continue;
-        row.total = Number(row.total) + Number(p.amount);
-        if (p.branch_id && row[p.branch_id] !== undefined) row[p.branch_id] = Number(row[p.branch_id]) + Number(p.amount);
-      }
-      return row;
-    });
-
-    // Member growth (cumulative)
-    const growth = months.map((mk) => {
-      const count = M.filter((m) => monthKey(new Date(m.created_at)) <= mk).length;
-      return { month: mk, count };
-    });
-
-    // Plan popularity (current subscription per member)
-    const planCounts = new Map<string, number>();
-    for (const m of M) {
-      const cur = pickCurrent(m.subscriptions ?? []);
-      if (cur) planCounts.set(cur.plan_id, (planCounts.get(cur.plan_id) ?? 0) + 1);
-    }
-    const planPopularity = plans.map((p) => ({ plan: localizedName(p, locale), count: planCounts.get(p.id) ?? 0 }));
-
-    // Heatmap 7×24 within range
-    const grid: number[][] = Array.from({ length: 7 }, () => Array(24).fill(0));
-    for (const c of C) {
-      if (!inRange(c.checked_in_at, from, to)) continue;
-      const { dow, hour } = riyadhDowHour(c.checked_in_at);
-      grid[dow][hour] += 1;
-    }
-
+    const o = overview.data;
+    const planNames = new Map(plans.map((p) => [p.id, localizedName(p, locale)]));
     return {
-      kpis: { active, newThisMonth, revenueThisMonth, expiring, renewalRate, churnRate },
-      revenueSeries, growth, planPopularity, grid, shownBranches,
+      kpis: o?.kpis,
+      revenueSeries: pivotRevenue(o?.revenue_by_month ?? [], shownBranches.map((b) => b.id)),
+      growth: (o?.member_growth ?? []).map((g) => ({ month: g.month, count: g.count })),
+      planPopularity: (o?.plan_popularity ?? []).map((p) => ({
+        plan: planNames.get(p.plan_id) ?? '—',
+        count: p.count,
+      })),
+      grid: heatmapGrid(o?.heatmap ?? []),
     };
-  }, [members.data, payments.data, checkins.data, branchId, from, to, branches, plans, locale]);
-
-  if (loading) return <InlineLoading />;
+  }, [overview.data, shownBranches, plans, locale]);
 
   const kpis: { key: MessageKey; value: string; tone: string; lead?: boolean }[] = [
-    { key: 'analytics.kpi.revenue_month', value: formatCurrency(data.kpis.revenueThisMonth, locale), tone: 'text-accent', lead: true },
-    { key: 'analytics.kpi.active', value: String(data.kpis.active), tone: 'text-text' },
-    { key: 'analytics.kpi.new_month', value: String(data.kpis.newThisMonth), tone: 'text-text' },
-    { key: 'analytics.kpi.expiring', value: String(data.kpis.expiring), tone: 'text-warn' },
-    { key: 'analytics.kpi.renewal_rate', value: `${data.kpis.renewalRate}%`, tone: 'text-text' },
-    { key: 'analytics.kpi.churn_rate', value: `${data.kpis.churnRate}%`, tone: 'text-text' },
+    { key: 'analytics.kpi.revenue_month', value: formatCurrency(data.kpis?.revenue_month ?? 0, locale), tone: 'text-accent', lead: true },
+    { key: 'analytics.kpi.active', value: String(data.kpis?.active ?? 0), tone: 'text-text' },
+    { key: 'analytics.kpi.new_month', value: String(data.kpis?.new_month ?? 0), tone: 'text-text' },
+    { key: 'analytics.kpi.expiring', value: String(data.kpis?.expiring ?? 0), tone: 'text-warn' },
+    { key: 'analytics.kpi.renewal_rate', value: `${data.kpis?.renewal_rate ?? 0}%`, tone: 'text-text' },
+    { key: 'analytics.kpi.churn_rate', value: `${data.kpis?.churn_rate ?? 0}%`, tone: 'text-text' },
   ];
 
   return (
@@ -133,56 +86,69 @@ export function Analytics() {
         }
       />
 
-      {/* KPI strip — revenue leads, the rest are quieter, hairline-divided */}
-      <div className="mb-14 flex flex-wrap items-end gap-x-10 gap-y-6">
-        {kpis.map((k) => (
-          <div key={k.key} className={k.lead ? 'pe-10 border-e border-border' : ''}>
-            <p className="eyebrow mb-2">{t(k.key)}</p>
-            <p className={`font-display leading-none ${k.lead ? 'text-4xl' : 'text-2xl'} ${k.tone}`}>{k.value}</p>
-          </div>
-        ))}
-      </div>
+      {overview.error && (
+        <div className="mb-6 flex flex-wrap items-center gap-3">
+          <ErrorText error={overview.error} />
+          <Button variant="secondary" onClick={overview.reload}>{t('common.retry')}</Button>
+        </div>
+      )}
 
-      <div className="grid gap-12 lg:grid-cols-2">
-        <ChartPanel titleKey="analytics.chart.revenue" onExport={() => exportCsv('revenue', data.revenueSeries as Record<string, string | number>[])}>
-          <LineChart data={data.revenueSeries} margin={CHART_MARGIN}>
-            <CartesianGrid strokeDasharray="2 4" stroke={GRID} />
-            <XAxis dataKey="month" tick={AXIS} tickLine={false} axisLine={{ stroke: GRID }} />
-            <YAxis tick={AXIS} tickLine={false} axisLine={false} />
-            <Tooltip contentStyle={TOOLTIP} cursor={{ stroke: GRID }} />
-            <Legend wrapperStyle={{ fontSize: 11, color: '#8b8b82' }} />
-            <Line type="monotone" dataKey="total" name={t('analytics.total')} stroke="#c8342f" strokeWidth={2} dot={false} />
-            {data.shownBranches.map((b, i) => (
-              <Line key={b.id} type="monotone" dataKey={b.id} name={localizedName(b, locale)} stroke={BRANCH_COLORS[i % BRANCH_COLORS.length]} strokeWidth={1.5} dot={false} />
+      {overview.loading ? (
+        <InlineLoading />
+      ) : (
+        <>
+          {/* KPI strip — revenue leads, the rest are quieter, hairline-divided */}
+          <div className="mb-14 flex flex-wrap items-end gap-x-10 gap-y-6">
+            {kpis.map((k) => (
+              <div key={k.key} className={k.lead ? 'pe-10 border-e border-border' : ''}>
+                <p className="eyebrow mb-2">{t(k.key)}</p>
+                <p className={`font-display leading-none ${k.lead ? 'text-4xl' : 'text-2xl'} ${k.tone}`}>{k.value}</p>
+              </div>
             ))}
-          </LineChart>
-        </ChartPanel>
+          </div>
 
-        <ChartPanel titleKey="analytics.chart.growth" onExport={() => exportCsv('member-growth', data.growth)}>
-          <AreaChart data={data.growth} margin={CHART_MARGIN}>
-            <CartesianGrid strokeDasharray="2 4" stroke={GRID} />
-            <XAxis dataKey="month" tick={AXIS} tickLine={false} axisLine={{ stroke: GRID }} />
-            <YAxis tick={AXIS} tickLine={false} axisLine={false} allowDecimals={false} />
-            <Tooltip contentStyle={TOOLTIP} cursor={{ stroke: GRID }} />
-            <Area type="monotone" dataKey="count" name={t('analytics.members')} stroke="#cbb994" strokeWidth={1.5} fill="#cbb994" fillOpacity={0.08} />
-          </AreaChart>
-        </ChartPanel>
+          <div className="grid gap-12 lg:grid-cols-2">
+            <ChartPanel titleKey="analytics.chart.revenue" onExport={() => exportCsv('revenue', data.revenueSeries)}>
+              <LineChart data={data.revenueSeries} margin={CHART_MARGIN}>
+                <CartesianGrid strokeDasharray="2 4" stroke={GRID} />
+                <XAxis dataKey="month" tick={AXIS} tickLine={false} axisLine={{ stroke: GRID }} />
+                <YAxis tick={AXIS} tickLine={false} axisLine={false} />
+                <Tooltip contentStyle={TOOLTIP} cursor={{ stroke: GRID }} />
+                <Legend wrapperStyle={{ fontSize: 11, color: '#8b8b82' }} />
+                <Line type="monotone" dataKey="total" name={t('analytics.total')} stroke="#c8342f" strokeWidth={2} dot={false} />
+                {shownBranches.map((b, i) => (
+                  <Line key={b.id} type="monotone" dataKey={b.id} name={localizedName(b, locale)} stroke={BRANCH_COLORS[i % BRANCH_COLORS.length]} strokeWidth={1.5} dot={false} />
+                ))}
+              </LineChart>
+            </ChartPanel>
 
-        <ChartPanel titleKey="analytics.chart.plans" onExport={() => exportCsv('plan-popularity', data.planPopularity)}>
-          <BarChart data={data.planPopularity} margin={CHART_MARGIN}>
-            <CartesianGrid strokeDasharray="2 4" stroke={GRID} vertical={false} />
-            <XAxis dataKey="plan" tick={AXIS} tickLine={false} axisLine={{ stroke: GRID }} />
-            <YAxis tick={AXIS} tickLine={false} axisLine={false} allowDecimals={false} />
-            <Tooltip contentStyle={TOOLTIP} cursor={{ fill: '#16191d' }} />
-            <Bar dataKey="count" name={t('analytics.members')} fill="#c8342f" radius={[2, 2, 0, 0]} />
-          </BarChart>
-        </ChartPanel>
+            <ChartPanel titleKey="analytics.chart.growth" onExport={() => exportCsv('member-growth', data.growth)}>
+              <AreaChart data={data.growth} margin={CHART_MARGIN}>
+                <CartesianGrid strokeDasharray="2 4" stroke={GRID} />
+                <XAxis dataKey="month" tick={AXIS} tickLine={false} axisLine={{ stroke: GRID }} />
+                <YAxis tick={AXIS} tickLine={false} axisLine={false} allowDecimals={false} />
+                <Tooltip contentStyle={TOOLTIP} cursor={{ stroke: GRID }} />
+                <Area type="monotone" dataKey="count" name={t('analytics.members')} stroke="#cbb994" strokeWidth={1.5} fill="#cbb994" fillOpacity={0.08} />
+              </AreaChart>
+            </ChartPanel>
 
-        <section>
-          <ChartHead titleKey="analytics.chart.heatmap" />
-          {data.grid.flat().every((v) => v === 0) ? <EmptyState messageKey="analytics.empty" /> : <Heatmap grid={data.grid} />}
-        </section>
-      </div>
+            <ChartPanel titleKey="analytics.chart.plans" onExport={() => exportCsv('plan-popularity', data.planPopularity)}>
+              <BarChart data={data.planPopularity} margin={CHART_MARGIN}>
+                <CartesianGrid strokeDasharray="2 4" stroke={GRID} vertical={false} />
+                <XAxis dataKey="plan" tick={AXIS} tickLine={false} axisLine={{ stroke: GRID }} />
+                <YAxis tick={AXIS} tickLine={false} axisLine={false} allowDecimals={false} />
+                <Tooltip contentStyle={TOOLTIP} cursor={{ fill: '#16191d' }} />
+                <Bar dataKey="count" name={t('analytics.members')} fill="#c8342f" radius={[2, 2, 0, 0]} />
+              </BarChart>
+            </ChartPanel>
+
+            <section>
+              <ChartHead titleKey="analytics.chart.heatmap" />
+              {data.grid.flat().every((v) => v === 0) ? <EmptyState messageKey="analytics.empty" /> : <Heatmap grid={data.grid} />}
+            </section>
+          </div>
+        </>
+      )}
     </div>
   );
 }

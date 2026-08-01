@@ -11,7 +11,7 @@ export type SubscriptionStatus =
   | 'cancelled';
 export type PaymentMethod = 'cash' | 'mada' | 'online' | 'other';
 
-export interface Profile {
+export type Profile = {
   id: string;
   gym_id: string | null;
   role: UserRole;
@@ -21,7 +21,7 @@ export interface Profile {
   created_at: string;
 }
 
-export interface Gym {
+export type Gym = {
   id: string;
   name_ar: string;
   name_en: string;
@@ -34,7 +34,7 @@ export interface Gym {
   created_at: string;
 }
 
-export interface Branch {
+export type Branch = {
   id: string;
   gym_id: string;
   name_ar: string;
@@ -49,7 +49,7 @@ export interface Branch {
   created_at: string;
 }
 
-export interface Member {
+export type Member = {
   id: string;
   gym_id: string;
   branch_id: string | null;
@@ -67,7 +67,43 @@ export interface Member {
   created_at: string;
 }
 
-export interface Plan {
+// The derived state shown in badges/filters, computed in SQL by the
+// members_overview view with the same rules as src/lib/subscriptionStatus.ts.
+export type MemberDisplayStatus =
+  | 'active'
+  | 'expiring'
+  | 'expired'
+  | 'frozen'
+  | 'pending'
+  | 'none';
+
+// View: one row per member joined to their CURRENT subscription (migration
+// 0015). security_invoker keeps RLS identical to `members`, so it can be
+// searched / filtered / paginated on the server.
+export type MemberOverview = {
+  id: string;
+  gym_id: string;
+  branch_id: string | null;
+  member_code: string | null;
+  full_name: string;
+  phone: string;
+  national_id: string | null;
+  gender: Gender | null;
+  dob: string | null;
+  photo_url: string | null;
+  user_id: string | null;
+  created_at: string;
+  sub_id: string | null;
+  plan_id: string | null;
+  sub_status: SubscriptionStatus | null;
+  start_date: string | null;
+  end_date: string | null;
+  sessions_remaining: number | null;
+  frozen_days_used: number | null;
+  display_status: MemberDisplayStatus;
+}
+
+export type Plan = {
   id: string;
   gym_id: string;
   name_ar: string;
@@ -84,7 +120,7 @@ export interface Plan {
   created_at: string;
 }
 
-export interface Subscription {
+export type Subscription = {
   id: string;
   member_id: string;
   plan_id: string;
@@ -98,7 +134,7 @@ export interface Subscription {
   created_at: string;
 }
 
-export interface Payment {
+export type Payment = {
   id: string;
   gym_id: string;
   subscription_id: string | null;
@@ -113,7 +149,7 @@ export interface Payment {
   created_at: string;
 }
 
-export interface CheckIn {
+export type CheckIn = {
   id: string;
   member_id: string;
   branch_id: string | null;
@@ -122,7 +158,7 @@ export interface CheckIn {
   recorded_by: string | null;
 }
 
-export interface Freeze {
+export type Freeze = {
   id: string;
   subscription_id: string;
   start_date: string;
@@ -134,7 +170,7 @@ export interface Freeze {
 
 export type FreezeRequestStatus = 'pending' | 'approved' | 'rejected';
 
-export interface FreezeRequest {
+export type FreezeRequest = {
   id: string;
   subscription_id: string;
   member_id: string;
@@ -150,7 +186,7 @@ export interface FreezeRequest {
 export type NotificationChannel = 'in_app' | 'whatsapp' | 'sms';
 export type NotificationStatus = 'simulated' | 'queued' | 'sent' | 'failed' | 'read';
 
-export interface Notification {
+export type Notification = {
   id: string;
   gym_id: string;
   member_id: string | null;
@@ -164,7 +200,7 @@ export interface Notification {
   read_at: string | null;
 }
 
-export interface Trainer {
+export type Trainer = {
   id: string;
   gym_id: string;
   branch_id: string | null;
@@ -181,7 +217,7 @@ export interface Trainer {
   created_at: string;
 }
 
-export interface SiteContent {
+export type SiteContent = {
   id: string;
   gym_id: string;
   key: string;
@@ -191,7 +227,7 @@ export interface SiteContent {
 
 export type PasswordRequestStatus = 'pending' | 'approved' | 'rejected';
 
-export interface PasswordChangeRequest {
+export type PasswordChangeRequest = {
   id: string;
   gym_id: string | null;
   user_id: string;
@@ -205,7 +241,7 @@ export interface PasswordChangeRequest {
   decided_by: string | null;
 }
 
-export interface AuditEntry {
+export type AuditEntry = {
   id: number;
   gym_id: string | null;
   actor: string | null;
@@ -219,7 +255,7 @@ export interface AuditEntry {
 
 export type StaffInviteStatus = 'pending' | 'accepted';
 
-export interface StaffInvite {
+export type StaffInvite = {
   id: string;
   gym_id: string;
   email: string;
@@ -227,15 +263,32 @@ export interface StaffInvite {
   branch_id: string | null;
   role: UserRole;
   status: StaffInviteStatus;
+  // Secret handed to the invitee (migration 0014): the sign-up trigger promotes
+  // the new user only on a token + email + not-expired match.
+  token: string;
+  expires_at: string;
   created_by: string | null;
   created_at: string;
   accepted_at: string | null;
   accepted_user_id: string | null;
 }
 
+// Exactly what analytics_overview() returns. Numerics arrive as JSON strings
+// often enough that the api layer coerces them; hence `unknown` on the numbers.
+export type AnalyticsOverviewRaw = {
+  kpis?: Record<string, unknown>;
+  revenue_by_month?: { month?: string; total?: unknown; branches?: Record<string, unknown> }[];
+  member_growth?: { month?: string; count?: unknown }[];
+  plan_popularity?: { plan_id?: string; count?: unknown }[];
+  heatmap?: { dow?: unknown; hour?: unknown; count?: unknown }[];
+};
+
 type Row<T> = { Row: T; Insert: Partial<T>; Update: Partial<T>; Relationships: [] };
 
-export interface Database {
+export type Database = {
+  // postgrest-js keys its typing behaviour off this marker (as emitted by
+  // `supabase gen types`); without it every Insert/Update collapses to `never`.
+  __InternalSupabase: { PostgrestVersion: '14.5' };
   public: {
     Tables: {
       profiles: Row<Profile>;
@@ -255,9 +308,15 @@ export interface Database {
       password_change_requests: Row<PasswordChangeRequest>;
       audit_log: Row<AuditEntry>;
     };
-    Views: Record<string, never>;
+    Views: {
+      members_overview: { Row: MemberOverview; Relationships: [] };
+    };
     Functions: {
       riyadh_today: { Args: Record<string, never>; Returns: string };
+      analytics_overview: {
+        Args: { p_from: string; p_to: string; p_branch?: string | null };
+        Returns: AnalyticsOverviewRaw;
+      };
       create_subscription: {
         Args: {
           p_member_id: string;
@@ -286,6 +345,41 @@ export interface Database {
         Returns: Subscription;
       };
       expire_due_subscriptions: { Args: Record<string, never>; Returns: number };
+      record_check_in: { Args: { p_member_id: string; p_branch_id: string }; Returns: CheckIn };
+      record_payment: {
+        Args: {
+          p_member_id: string;
+          p_subscription_id: string | null;
+          p_amount: number;
+          p_method: PaymentMethod;
+          p_receipt?: string | null;
+        };
+        Returns: Payment;
+      };
+      public_join: {
+        Args: {
+          p_full_name: string;
+          p_phone: string;
+          p_national_id: string;
+          p_gender: Gender | null;
+          p_plan_id: string;
+          p_branch_id: string;
+        };
+        Returns: string;
+      };
+      request_freeze: {
+        Args: { p_subscription_id: string; p_days: number; p_note?: string | null };
+        Returns: FreezeRequest;
+      };
+      approve_freeze_request: { Args: { p_request_id: string }; Returns: FreezeRequest };
+      reject_freeze_request: { Args: { p_request_id: string }; Returns: FreezeRequest };
+      request_password_change: { Args: { p_email: string; p_new_password: string }; Returns: undefined };
+      approve_password_change: { Args: { p_request_id: string }; Returns: PasswordChangeRequest };
+      reject_password_change: { Args: { p_request_id: string }; Returns: PasswordChangeRequest };
+      staff_set_member_password: {
+        Args: { p_member_id: string; p_new_password: string };
+        Returns: undefined;
+      };
     };
     Enums: {
       user_role: UserRole;

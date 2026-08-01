@@ -3,8 +3,33 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>نادي القوة | Power Gym</title>
-    <meta name="description" content="نظام إدارة النادي الرياضي — Power Gym" />
+
+    <!-- The document ships brand-free: this is a white-label product, so no gym
+         name is hardcoded here. Once the `gyms` row loads, src/lib/Brand.tsx
+         replaces the title and (when a logo is set) the favicon at runtime. -->
+    <title>نظام إدارة النادي الرياضي | Gym Management</title>
+    <meta
+      name="description"
+      content="نظام إدارة الأعضاء والاشتراكات للنوادي الرياضية — Membership and subscription management for gyms."
+    />
+
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+
+    <!-- Neutral share card so a pasted link is never blank. -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="نظام إدارة النادي الرياضي | Gym Management" />
+    <meta
+      property="og:description"
+      content="نظام إدارة الأعضاء والاشتراكات للنوادي الرياضية — Membership and subscription management for gyms."
+    />
+    <meta property="og:locale" content="ar_SA" />
+    <meta property="og:locale:alternate" content="en_US" />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="نظام إدارة النادي الرياضي | Gym Management" />
+    <meta
+      name="twitter:description"
+      content="نظام إدارة الأعضاء والاشتراكات للنوادي الرياضية — Membership and subscription management for gyms."
+    />
   </head>
   <body>
     <div id="root"></div>

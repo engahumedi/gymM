@@ -30,30 +30,40 @@ English (LTR) toggle.
 - **All strings via the i18n dictionary — no hardcoded text.** Everything must mirror
   correctly in RTL (layout, tables, charts, icons).
 
-## Current status (2026-07-12)
+## Current status (2026-08-01)
 **All 8 phases done** and verified on the live Supabase project (`hfjyaduiynigylvunnto`);
-deployed to GitHub Pages. UI is redesigned to an **editorial-athletic** system (dark charcoal
-ground, one crimson accent, self-hosted Reem Kufi / Fraunces / IBM Plex Sans Arabic, thin
-lucide icons, hairline-and-whitespace layout — no cards/glow/emoji). Design tokens live in
-`src/index.css` + `tailwind.config.js`. The **white-label Settings screen** is now fully built
-(Identity / Branches / Staff invites / Site content — see the Settings note in `PROGRESS.md`).
-Develop on branch `claude/gym-system-context-setup-h0pqfe`. See the **Handoff** section at the
-top of `PROGRESS.md` for what to request from the user (Supabase URL + anon key for `.env`; a
-`sbp_` PAT to apply migrations over HTTPS) and the sandbox networking notes.
+deployed to GitHub Pages. UI is an **editorial-athletic** system (dark charcoal ground, one crimson
+accent, self-hosted Reem Kufi / Fraunces / IBM Plex Sans Arabic, thin lucide icons, hairline-and-
+whitespace layout — no cards/glow/emoji). Design tokens live in `src/index.css` +
+`tailwind.config.js`. Develop on branch `claude/gym-system-context-setup-ezbbxk`. See the **Handoff**
+section at the top of `PROGRESS.md` for what to request from the user (Supabase URL + anon key for
+`.env`; a `sbp_` PAT to apply migrations over HTTPS) and the sandbox networking notes.
 
-**Post-launch additions:** national ID on members, member-initiated **freeze requests** with
-reception approval (`freeze_requests`, migration `0009`), rebrand to **أبطال الرياضة**, and a
-home login link, and a full white-label **Settings** screen (gym identity, branch CRUD, staff
-invites `0010`, site-content/trainers editors). **Latest batch:** runtime branding (saved
-`primary_color` → `--accent` + logo shown app-wide), **CSV member import**, **member QR + reception
-camera scan check-in** (`qrcode.react` / `html5-qrcode`), and **password reset by request→staff
-approval** (`password_change_requests`, migration `0011` — no email/SMTP; approve writes a bcrypt
-hash to `auth.users`). **Latest:** staff can reset a member's password on the spot
-(`staff_set_member_password`), the password-request RPC is rate-limited, a **printable membership
-card** at `/card/:id`, an **audit log** (`audit_log` + triggers + a Settings → Activity viewer),
-`expire_due_subscriptions` scheduled on **pg_cron**, and **Vitest** unit tests for `src/lib/`
-(caught + fixed a real `normalizeSaudiPhone` bug). DB migrations run through `0013` (all applied
-live; `supabase/apply_all.sql` is the one-paste bundle). Run tests with `npm test`.
+**Feature set:** members / plans / subscriptions with all lifecycle RPCs, check-in (manual + QR
+scan with confirmation), manual payments + printable receipt, notifications engine (pg_cron +
+`notify` Edge Function stub), analytics, public marketing site + Join Now, member portal, freeze
+requests, CSV import, printable membership card, audit log, password reset by request→staff
+approval (no SMTP), and a full white-label **Settings** screen (identity / branches / staff invites
+/ site content) with runtime brand colours + logo.
+
+**Security + performance pass (migrations 0014–0015, applied live).** A review of the live system
+found and fixed: a **privilege-escalation hole** (any member could `PATCH` its own
+`profiles.role` to `super_admin` — now blocked by a trigger and audited), maintenance/audit RPCs
+callable by any signed-in user (Postgres grants EXECUTE to `PUBLIC` by default — revoked), private
+member photos readable by any authenticated user, user enumeration in the password-reset RPC,
+duplicate check-ins burning plan sessions, unlimited self-priced pending renewals, and staff invites
+claimable by email alone. **PostgREST caps responses at 1000 rows**, which was silently truncating
+analytics, so aggregation moved into `analytics_overview()` and member lists onto the
+`members_overview` view with server-side search/filter/paging. App side: route-level code splitting
+(entry 677→570 KB), an error boundary, an accessible Modal, CI that runs type-check + tests on every
+branch, and **`npm run test:rls`** — a live RLS regression suite (8 checks) to run after any policy
+change. DB migrations run through `0015`; `supabase/apply_all.sql` is the one-paste bundle.
+Run tests with `npm test`, RLS checks with `npm run test:rls`.
+
+**Known follow-ups (not done):** captcha on the public forms (needs a provider key), 15% VAT on
+receipts, real WhatsApp/SMS sending, cross-branch check-in for all-branch plans, SEO/prerender for
+the marketing pages, and a deliberate react-router 7 upgrade (the open advisory is SSR-only and
+unreachable in this client-side SPA).
 
 ## Pointer
 Full requirements live in **SPEC.md** — read the relevant section before starting any phase.

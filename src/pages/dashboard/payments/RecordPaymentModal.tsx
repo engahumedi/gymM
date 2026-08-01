@@ -1,12 +1,12 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { useI18n } from '@/i18n/I18nProvider';
 import {
-  fetchMembers,
   fetchSubscriptions,
   recordPayment,
-  type MemberListItem,
+  searchMembersQuick,
+  type MemberOverview,
 } from '@/lib/api';
-import { useAsync } from '@/lib/useAsync';
+import { useAsync, useDebounced } from '@/lib/useAsync';
 import { errorMessageKey } from '@/lib/errors';
 import { localizedName, methodLabelKey, PAYMENT_METHODS } from '@/lib/display';
 import { formatDate } from '@/lib/format';
@@ -26,10 +26,9 @@ export function RecordPaymentModal({
 }) {
   const { t, locale } = useI18n();
   const { plans } = useReferenceData();
-  const members = useAsync(fetchMembers, []);
 
   const [query, setQuery] = useState('');
-  const [member, setMember] = useState<MemberListItem | null>(null);
+  const [member, setMember] = useState<MemberOverview | null>(null);
   const [subId, setSubId] = useState<string>('');
   const [amount, setAmount] = useState('');
   const [method, setMethod] = useState<PaymentMethod>('cash');
@@ -37,13 +36,10 @@ export function RecordPaymentModal({
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  const matches = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q || member) return [] as MemberListItem[];
-    return (members.data ?? [])
-      .filter((m) => `${m.full_name} ${m.phone} ${m.member_code ?? ''}`.toLowerCase().includes(q))
-      .slice(0, 6);
-  }, [members.data, query, member]);
+  // Server-side, debounced member lookup — the picker never loads the roster.
+  const debouncedQuery = useDebounced(member ? '' : query.trim(), 300);
+  const search = useAsync(() => searchMembersQuick(debouncedQuery, 6), [debouncedQuery]);
+  const matches = debouncedQuery ? search.data ?? [] : [];
 
   const memberSubs = useAsync(async () => (member ? fetchSubscriptions(member.id) : []), [member?.id]);
   const planName = (planId: string) => localizedName(plans.find((p) => p.id === planId), locale);

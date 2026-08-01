@@ -3,8 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useI18n } from '@/i18n/I18nProvider';
 import { useReferenceData } from '@/lib/ReferenceData';
 import {
-  fetchCheckIns, fetchFreezes, fetchMember, fetchPayments, fetchSubscriptions,
-  signedPhotoUrl, unfreezeSubscription, staffSetMemberPassword,
+  fetchMemberProfile, signedPhotoUrl, unfreezeSubscription, staffSetMemberPassword,
 } from '@/lib/api';
 import { useAsync } from '@/lib/useAsync';
 import { localizedName, methodLabelKey } from '@/lib/display';
@@ -23,18 +22,18 @@ import type { MessageKey } from '@/i18n/dictionary';
 
 type Tab = 'subscriptions' | 'payments' | 'checkins' | 'freezes';
 
+const MIN_PASSWORD_LENGTH = 8;
+
 export function MemberProfile() {
   const { t, locale } = useI18n();
   const { id } = useParams();
   const navigate = useNavigate();
   const { branches, plans } = useReferenceData();
 
-  const member = useAsync(() => fetchMember(id!), [id]);
-  const subs = useAsync(() => fetchSubscriptions(id!), [id]);
-  const payments = useAsync(() => fetchPayments(id!), [id]);
-  const checkins = useAsync(() => fetchCheckIns(id!), [id]);
-  const freezes = useAsync(() => fetchFreezes(id!), [id]);
-  const photo = useAsync(async () => (member.data?.photo_url ? signedPhotoUrl(member.data.photo_url) : null), [member.data?.photo_url]);
+  // Member + subscriptions (with freezes) + payments + check-ins in ONE query.
+  const profile = useAsync(() => fetchMemberProfile(id!), [id]);
+  const photoPath = profile.data?.member.photo_url ?? null;
+  const photo = useAsync(() => signedPhotoUrl(photoPath), [photoPath]);
 
   const [tab, setTab] = useState<Tab>('subscriptions');
   const [action, setAction] = useState<SubAction | null>(null);
@@ -43,13 +42,14 @@ export function MemberProfile() {
 
   const planName = (planId: string) => localizedName(plans.find((p) => p.id === planId) as Plan, locale);
   const branchName = (bid: string | null) => { const b = branches.find((x) => x.id === bid); return b ? localizedName(b, locale) : '—'; };
-  const reloadAll = () => { subs.reload(); payments.reload(); checkins.reload(); freezes.reload(); };
+  const reloadAll = () => profile.reload();
 
-  if (member.loading) return <InlineLoading />;
-  if (member.error || !member.data) return <ErrorText error={member.error ?? 'not found'} />;
+  if (profile.loading) return <InlineLoading />;
+  if (profile.error || !profile.data) return <ErrorText error={profile.error ?? 'not found'} />;
 
-  const m = member.data;
-  const current = pickCurrent(subs.data ?? []);
+  const m = profile.data.member;
+  const subs = profile.data.subscriptions;
+  const current = pickCurrent(subs);
   const status = subscriptionDisplayStatus(current);
 
   async function doUnfreeze() {
@@ -154,10 +154,10 @@ export function MemberProfile() {
         ))}
       </div>
 
-      {tab === 'subscriptions' && <SubsTable subs={subs.data ?? []} planName={planName} />}
-      {tab === 'payments' && <PaymentsTable rows={payments.data ?? []} />}
-      {tab === 'checkins' && <CheckinsTable rows={checkins.data ?? []} branchName={branchName} />}
-      {tab === 'freezes' && <FreezesTable rows={freezes.data ?? []} />}
+      {tab === 'subscriptions' && <SubsTable subs={subs} planName={planName} />}
+      {tab === 'payments' && <PaymentsTable rows={profile.data.payments} />}
+      {tab === 'checkins' && <CheckinsTable rows={profile.data.checkIns} branchName={branchName} />}
+      {tab === 'freezes' && <FreezesTable rows={profile.data.freezes} />}
 
       {action && (
         <SubscriptionActionModal action={action} member={m} subscription={current} onClose={() => setAction(null)} onDone={reloadAll} />
@@ -176,7 +176,8 @@ function StaffPasswordModal({ memberId, onClose }: { memberId: string; onClose: 
 
   async function submit() {
     setError(null);
-    if (password.length < 6) return setError(t('reset.err.short'));
+    // Server rule (migration 0014) is 8 characters — fail here, not on the RPC.
+    if (password.length < MIN_PASSWORD_LENGTH) return setError(t('err.weak_password'));
     setBusy(true);
     try {
       await staffSetMemberPassword(memberId, password);

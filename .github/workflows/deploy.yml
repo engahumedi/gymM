@@ -28,6 +28,13 @@ jobs:
 
       - run: npm ci
 
+      # A red type-check or a failing test must never reach Pages.
+      - name: Type-check
+        run: npm run lint
+
+      - name: Unit tests
+        run: npm test
+
       - name: Build
         # Client-safe Supabase URL + anon key come from the committed
         # .env.production (RLS protects the data), so no Actions secret is needed.

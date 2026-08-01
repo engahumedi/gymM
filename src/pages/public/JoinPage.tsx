@@ -20,7 +20,8 @@ const schema = z.object({
   phone: z.string().regex(SAUDI_PHONE_RE),
   nationalId: z.string().trim().regex(SAUDI_ID_RE),
   email: z.string().email(),
-  password: z.string().min(6),
+  // Minimum 8 characters — same rule the server enforces (migration 0014).
+  password: z.string().min(8),
   planId: z.string().uuid(),
   branchId: z.string().uuid(),
 });
@@ -53,7 +54,9 @@ export function JoinPage() {
       const errs: Record<string, boolean> = {};
       for (const i of parsed.error.issues) errs[String(i.path[0])] = true;
       setFieldErr(errs);
-      return setError(errs.phone ? t('err.invalid_phone') : t('err.generic'));
+      if (errs.phone) return setError(t('err.invalid_phone'));
+      if (errs.password) return setError(t('err.weak_password'));
+      return setError(t('err.generic'));
     }
     setBusy(true);
     try {

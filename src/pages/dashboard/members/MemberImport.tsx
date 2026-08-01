@@ -4,6 +4,8 @@ import { useI18n } from '@/i18n/I18nProvider';
 import { useAuth } from '@/auth/AuthProvider';
 import { useReferenceData } from '@/lib/ReferenceData';
 import { createMember, type MemberInsert } from '@/lib/api';
+import type { Gender } from '@/lib/database.types';
+import type { MessageKey } from '@/i18n/dictionary';
 import { parseCsv, exportCsv } from '@/lib/csv';
 import { SAUDI_PHONE_RE, SAUDI_ID_RE, normalizeSaudiPhone } from '@/lib/phone';
 import { localizedName } from '@/lib/display';
@@ -21,17 +23,17 @@ type Col = (typeof COLUMNS)[number];
 interface ParsedRow {
   data: Record<Col, string>;
   valid: boolean;
-  errorKey: string | null;
+  errorKey: MessageKey | null;
 }
 
-function normGender(v: string): string | null {
+function normGender(v: string): Gender | null {
   const s = v.trim().toLowerCase();
   if (['male', 'm', 'ذكر'].includes(s)) return 'male';
   if (['female', 'f', 'أنثى', 'انثى'].includes(s)) return 'female';
   return null;
 }
 
-function validateRow(data: Record<Col, string>): { valid: boolean; errorKey: string | null } {
+function validateRow(data: Record<Col, string>): { valid: boolean; errorKey: MessageKey | null } {
   if (!data.full_name.trim()) return { valid: false, errorKey: 'import.err.no_name' };
   const phone = normalizeSaudiPhone(data.phone);
   if (!SAUDI_PHONE_RE.test(phone)) return { valid: false, errorKey: 'err.invalid_phone' };
@@ -187,7 +189,7 @@ export function MemberImport() {
                         <span className="inline-flex items-center gap-1 text-good"><Check {...ICON_SM} /></span>
                       ) : (
                         <span className="inline-flex items-center gap-1 text-accent">
-                          <AlertCircle {...ICON_SM} /> {t(r.errorKey as never)}
+                          <AlertCircle {...ICON_SM} /> {r.errorKey && t(r.errorKey)}
                         </span>
                       )}
                     </td>

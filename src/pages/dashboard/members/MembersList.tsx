@@ -1,44 +1,41 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useI18n } from '@/i18n/I18nProvider';
 import { useAuth } from '@/auth/AuthProvider';
 import { useReferenceData } from '@/lib/ReferenceData';
-import { fetchMembers, type MemberListItem } from '@/lib/api';
-import { useAsync } from '@/lib/useAsync';
+import { fetchMembersPage, DEFAULT_PAGE_SIZE } from '@/lib/api';
+import { useDebounced, usePaged } from '@/lib/useAsync';
 import { localizedName } from '@/lib/display';
 import { formatDate } from '@/lib/format';
-import { pickCurrent, subscriptionDisplayStatus, type DisplayStatus } from '@/lib/subscriptionStatus';
+import type { MemberDisplayStatus } from '@/lib/database.types';
 import { StatusBadge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { SelectInput } from '@/components/ui/Field';
 import { InlineLoading, EmptyState, ErrorText, PageHeader, DaysLeft } from '@/components/ui/misc';
 import { Search, UserPlus, Download, ICON_SM } from '@/components/ui/icons';
 
-const STATUS_OPTIONS: DisplayStatus[] = ['active', 'expiring', 'expired', 'frozen', 'pending', 'none'];
+const STATUS_OPTIONS: MemberDisplayStatus[] = ['active', 'expiring', 'expired', 'frozen', 'pending', 'none'];
 
 export function MembersList() {
   const { t, locale } = useI18n();
   const { profile } = useAuth();
   const { branches } = useReferenceData();
   const navigate = useNavigate();
-  const { data, loading, error } = useAsync(fetchMembers, []);
 
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<DisplayStatus | ''>('');
+  const [statusFilter, setStatusFilter] = useState<MemberDisplayStatus | ''>('');
   const [branchFilter, setBranchFilter] = useState('');
   const isAdmin = profile?.role === 'super_admin';
 
-  const rows = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    return (data ?? [])
-      .map((m) => { const sub = pickCurrent(m.subscriptions ?? []); return { m, sub, status: subscriptionDisplayStatus(sub) }; })
-      .filter(({ m, status }) => {
-        if (q && !`${m.full_name} ${m.phone} ${m.member_code ?? ''}`.toLowerCase().includes(q)) return false;
-        if (statusFilter && status !== statusFilter) return false;
-        if (branchFilter && m.branch_id !== branchFilter) return false;
-        return true;
-      });
-  }, [data, search, statusFilter, branchFilter]);
+  // Search, filters and paging all run on the server (members_overview view);
+  // the browser never downloads more than one page of members.
+  const query = useDebounced(search.trim(), 300);
+  const page = usePaged(
+    (offset, limit) =>
+      fetchMembersPage({ search: query, status: statusFilter || undefined, branchId: branchFilter, offset, limit }),
+    [query, statusFilter, branchFilter],
+    DEFAULT_PAGE_SIZE,
+  );
 
   const branchName = (id: string | null) => {
     const b = branches.find((x) => x.id === id);
@@ -48,7 +45,7 @@ export function MembersList() {
   return (
     <div>
       <PageHeader
-        eyebrow={data ? `${data.length} ${t('members.count')}` : undefined}
+        eyebrow={page.loading ? undefined : `${page.total} ${t('members.count')}`}
         title={t('members.title')}
         action={
           <div className="flex items-center gap-2">
@@ -70,9 +67,9 @@ export function MembersList() {
             className="w-full rounded border border-border bg-surface py-2 text-sm text-text outline-none transition-colors focus:border-accent placeholder:text-faint ps-9 pe-3"
           />
         </div>
-        <SelectInput value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as DisplayStatus | '')} className="w-auto">
+        <SelectInput value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as MemberDisplayStatus | '')} className="w-auto">
           <option value="">{t('members.filter.status')}</option>
-          {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{t(`status.${s}` as never)}</option>)}
+          {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{t(`status.${s}`)}</option>)}
         </SelectInput>
         {isAdmin && (
           <SelectInput value={branchFilter} onChange={(e) => setBranchFilter(e.target.value)} className="w-auto">
@@ -82,42 +79,61 @@ export function MembersList() {
         )}
       </div>
 
-      <ErrorText error={error} />
-      {loading ? (
+      {page.error && (
+        <div className="mb-4 flex flex-wrap items-center gap-3">
+          <ErrorText error={page.error} />
+          <Button variant="secondary" onClick={page.reload}>{t('common.retry')}</Button>
+        </div>
+      )}
+
+      {page.loading ? (
         <InlineLoading />
-      ) : rows.length === 0 ? (
+      ) : page.rows.length === 0 ? (
         <EmptyState messageKey="members.empty" />
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[52rem] text-start text-sm">
-            <thead>
-              <tr className="border-b border-border text-xs tracking-wide text-muted">
-                <Th>{t('members.col.code')}</Th><Th>{t('members.col.name')}</Th>
-                <Th>{t('members.col.phone')}</Th><Th>{t('members.col.branch')}</Th>
-                <Th>{t('members.col.start')}</Th><Th>{t('members.col.end')}</Th>
-                <Th>{t('members.col.remaining')}</Th><Th>{t('members.col.status')}</Th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map(({ m, sub, status }) => (
-                <tr
-                  key={m.id}
-                  onClick={() => navigate(`/dashboard/members/${m.id}`)}
-                  className="cursor-pointer border-b border-border transition-colors hover:bg-surface"
-                >
-                  <Td className="font-mono text-xs text-faint">{m.member_code}</Td>
-                  <Td className="font-medium text-text">{m.full_name}</Td>
-                  <Td dir="ltr" className="text-start text-muted">{m.phone}</Td>
-                  <Td className="text-muted">{branchName(m.branch_id)}</Td>
-                  <Td className="text-muted">{formatDate(sub?.start_date, locale)}</Td>
-                  <Td className="text-muted">{formatDate(sub?.end_date, locale)}</Td>
-                  <Td>{sub && (sub.status === 'active' || sub.status === 'frozen') ? <DaysLeft end={sub.end_date} /> : <span className="text-faint">—</span>}</Td>
-                  <Td><StatusBadge status={status} /></Td>
+        <>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[52rem] text-start text-sm">
+              <thead>
+                <tr className="border-b border-border text-xs tracking-wide text-muted">
+                  <Th>{t('members.col.code')}</Th><Th>{t('members.col.name')}</Th>
+                  <Th>{t('members.col.phone')}</Th><Th>{t('members.col.branch')}</Th>
+                  <Th>{t('members.col.start')}</Th><Th>{t('members.col.end')}</Th>
+                  <Th>{t('members.col.remaining')}</Th><Th>{t('members.col.status')}</Th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {page.rows.map((m) => (
+                  <tr
+                    key={m.id}
+                    onClick={() => navigate(`/dashboard/members/${m.id}`)}
+                    className="cursor-pointer border-b border-border transition-colors hover:bg-surface"
+                  >
+                    <Td className="font-mono text-xs text-faint">{m.member_code}</Td>
+                    <Td className="font-medium text-text">{m.full_name}</Td>
+                    <Td dir="ltr" className="text-start text-muted">{m.phone}</Td>
+                    <Td className="text-muted">{branchName(m.branch_id)}</Td>
+                    <Td className="text-muted">{formatDate(m.start_date, locale)}</Td>
+                    <Td className="text-muted">{formatDate(m.end_date, locale)}</Td>
+                    <Td>{m.sub_status === 'active' || m.sub_status === 'frozen' ? <DaysLeft end={m.end_date} /> : <span className="text-faint">—</span>}</Td>
+                    <Td><StatusBadge status={m.display_status} /></Td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="mt-6 flex items-center justify-between gap-4">
+            <p className="text-xs text-faint">
+              {t('common.showing')} {page.rows.length} {t('common.of')} {page.total}
+            </p>
+            {page.hasMore && (
+              <Button variant="secondary" loading={page.loadingMore} onClick={page.loadMore}>
+                {t('common.load_more')}
+              </Button>
+            )}
+          </div>
+        </>
       )}
     </div>
   );
@@ -129,5 +145,3 @@ function Th({ children }: { children: React.ReactNode }) {
 function Td({ children, className = '', dir }: { children: React.ReactNode; className?: string; dir?: string }) {
   return <td dir={dir} className={`px-3 py-3 ${className}`}>{children}</td>;
 }
-
-export type { MemberListItem };

@@ -2,33 +2,46 @@ import { Link } from 'react-router-dom';
 import { useI18n } from '@/i18n/I18nProvider';
 import { useAuth } from '@/auth/AuthProvider';
 import {
-  fetchMembers, fetchPendingFreezeRequests, approveFreezeRequest, rejectFreezeRequest,
+  fetchMemberCounts, fetchMembersPage, fetchPendingFreezeRequests, approveFreezeRequest, rejectFreezeRequest,
   fetchPendingPasswordRequests, approvePasswordChange, rejectPasswordChange,
-  type MemberListItem,
+  type MemberOverview,
 } from '@/lib/api';
 import { useAsync } from '@/lib/useAsync';
-import { pickCurrent, subscriptionDisplayStatus, type DisplayStatus } from '@/lib/subscriptionStatus';
+import type { MemberDisplayStatus } from '@/lib/database.types';
 import { PageHeader, InlineLoading } from '@/components/ui/misc';
 import { Button } from '@/components/ui/Button';
 import { ArrowUpRight, Snowflake, KeyRound, ICON_SM } from '@/components/ui/icons';
 import { useState } from 'react';
 import type { MessageKey } from '@/i18n/dictionary';
 
+const ALERT_LIMIT = 5;
+
 export function DashboardHome() {
   const { t } = useI18n();
   const { profile } = useAuth();
-  const { data, loading } = useAsync(fetchMembers, []);
 
-  const members = data ?? [];
-  const withStatus = members.map((m) => ({ m, status: subscriptionDisplayStatus(pickCurrent(m.subscriptions ?? [])) }));
-  const count = (s: DisplayStatus) => withStatus.filter((x) => x.status === s).length;
-  const listFor = (s: DisplayStatus) => withStatus.filter((x) => x.status === s).map((x) => x.m);
+  // Counts come back as Content-Range headers (no rows), and each alert list is
+  // capped at five rows — the dashboard never downloads the member table.
+  const { data, loading } = useAsync(async () => {
+    const [counts, expiring, pending, expired] = await Promise.all([
+      fetchMemberCounts(),
+      fetchMembersPage({ status: 'expiring', limit: ALERT_LIMIT }),
+      fetchMembersPage({ status: 'pending', limit: ALERT_LIMIT }),
+      fetchMembersPage({ status: 'expired', limit: ALERT_LIMIT }),
+    ]);
+    return { counts, expiring, pending, expired };
+  }, []);
+
+  const counts = data?.counts ?? {};
 
   return (
     <div>
-      <PageHeader eyebrow={t('dash.eyebrow')} title={`${t('dash.welcome')}، ${profile?.full_name ?? ''}`} />
+      <PageHeader
+        eyebrow={t('dash.eyebrow')}
+        title={`${t('dash.welcome')}${t('common.list_sep')} ${profile?.full_name ?? ''}`}
+      />
 
-      {loading ? (
+      {loading || !data ? (
         <InlineLoading />
       ) : (
         <>
@@ -36,11 +49,11 @@ export function DashboardHome() {
           <div className="mb-14 flex flex-col gap-8 sm:flex-row sm:items-end sm:gap-16">
             <div>
               <p className="eyebrow mb-2">{t('dash.kpi.members')}</p>
-              <p className="font-display text-7xl leading-none text-text">{members.length}</p>
+              <p className="font-display text-7xl leading-none text-text">{counts.total ?? 0}</p>
             </div>
             <div className="flex gap-12 pb-2">
-              <Stat label={t('dash.kpi.expiring')} value={count('expiring')} tone="text-warn" />
-              <Stat label={t('dash.kpi.pending')} value={count('pending')} tone="text-text" />
+              <Stat label={t('dash.kpi.expiring')} value={counts.expiring ?? 0} tone="text-warn" />
+              <Stat label={t('dash.kpi.pending')} value={counts.pending ?? 0} tone="text-text" />
             </div>
           </div>
 
@@ -49,9 +62,9 @@ export function DashboardHome() {
 
           {/* Alerts — uneven split, hairline lists (no boxes) */}
           <div className="grid gap-x-16 gap-y-10 md:grid-cols-[1.4fr_1fr]">
-            <AlertList titleKey="dash.alerts.expiring" status="expiring" members={listFor('expiring')} />
-            <AlertList titleKey="dash.alerts.pending" status="pending" members={listFor('pending')} />
-            <AlertList titleKey="dash.alerts.expired" status="expired" members={listFor('expired')} />
+            <AlertList titleKey="dash.alerts.expiring" status="expiring" members={data.expiring.rows} total={data.expiring.total} />
+            <AlertList titleKey="dash.alerts.pending" status="pending" members={data.pending.rows} total={data.pending.total} />
+            <AlertList titleKey="dash.alerts.expired" status="expired" members={data.expired.rows} total={data.expired.total} />
           </div>
         </>
       )}
@@ -149,7 +162,17 @@ function Stat({ label, value, tone }: { label: string; value: number; tone: stri
   );
 }
 
-function AlertList({ titleKey, status, members }: { titleKey: MessageKey; status: DisplayStatus; members: MemberListItem[] }) {
+function AlertList({
+  titleKey,
+  status,
+  members,
+  total,
+}: {
+  titleKey: MessageKey;
+  status: MemberDisplayStatus;
+  members: MemberOverview[];
+  total: number;
+}) {
   const { t } = useI18n();
   const dot: Record<string, string> = { expiring: 'bg-warn', pending: 'bg-text', expired: 'bg-accent' };
   return (
@@ -157,13 +180,13 @@ function AlertList({ titleKey, status, members }: { titleKey: MessageKey; status
       <h3 className="mb-1 flex items-center gap-2 border-b border-border pb-3 text-sm font-semibold text-text">
         <span className={`inline-block h-1.5 w-1.5 rounded-full ${dot[status] ?? 'bg-muted'}`} />
         {t(titleKey)}
-        <span className="text-faint">{members.length}</span>
+        <span className="text-faint">{total}</span>
       </h3>
       {members.length === 0 ? (
         <p className="py-4 text-sm text-faint">{t('dash.alerts.none')}</p>
       ) : (
         <ul>
-          {members.slice(0, 7).map((m) => (
+          {members.map((m) => (
             <li key={m.id}>
               <Link to={`/dashboard/members/${m.id}`} className="group flex items-center justify-between border-b border-border py-2.5 text-sm">
                 <span className="text-text">{m.full_name}</span>
@@ -174,7 +197,7 @@ function AlertList({ titleKey, status, members }: { titleKey: MessageKey; status
               </Link>
             </li>
           ))}
-          {members.length > 7 && <li className="py-2.5 text-xs text-faint">+{members.length - 7}</li>}
+          {total > members.length && <li className="py-2.5 text-xs text-faint">+{total - members.length}</li>}
         </ul>
       )}
     </section>
