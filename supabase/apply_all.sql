@@ -2042,3 +2042,552 @@ select cron.schedule(
   '5 0 * * *',
   $$ select public.expire_due_subscriptions(); $$
 );
+
+-- =============================================================================
+-- 0014_security_hardening.sql
+-- =============================================================================
+-- =============================================================================
+-- 0014_security_hardening.sql — closes the issues found in the security review
+--
+--  1. Privilege escalation: profiles_self_update let ANY user rewrite their own
+--     role / branch_id / member_id / gym_id (verified live: a member could make
+--     itself super_admin and read the whole gym). Guarded by a trigger so the
+--     super-admin flows (staff branch reassignment) and the SECURITY DEFINER
+--     RPCs (public_join) keep working.
+--  2. Private member photos were readable/listable by ANY authenticated user.
+--  3. Maintenance RPCs (expire / enqueue) and record_audit were callable by any
+--     signed-in user — including PUBLIC, which Postgres grants by default.
+--  4. request_password_change leaked whether an email is registered, and a
+--     bogus pending request blocked the real owner from filing one.
+--  5. record_check_in had no duplicate window: re-scanning burned plan sessions
+--     and inflated analytics.
+--  6. Members could queue unlimited pending subscriptions with any price_paid.
+--  7. Staff invites were claimed by email alone (with autoconfirm on, e-mail
+--     ownership is never proven) and never expired → token + expiry.
+-- =============================================================================
+
+-- -----------------------------------------------------------------------------
+-- 1. Profiles: block self-service privilege changes
+-- -----------------------------------------------------------------------------
+-- SECURITY INVOKER (default) on purpose: `current_user` then reflects the real
+-- caller — 'authenticated' for browser traffic, the function owner (postgres)
+-- when a SECURITY DEFINER RPC such as public_join performs the update.
+create or replace function public.guard_profile_privileges() returns trigger
+language plpgsql as $$
+begin
+  if (new.role, new.branch_id, new.member_id, new.gym_id)
+     is distinct from (old.role, old.branch_id, old.member_id, old.gym_id)
+     and current_user in ('authenticated', 'anon')
+     and not public.is_super_admin() then
+    raise exception 'forbidden_privilege_change';
+  end if;
+  return new;
+end $$;
+
+drop trigger if exists trg_guard_profile_privileges on public.profiles;
+create trigger trg_guard_profile_privileges before update on public.profiles
+  for each row execute function public.guard_profile_privileges();
+
+-- Role/branch changes are security events — record them (DEFINER so the write
+-- reaches audit_log, which has no INSERT policy).
+create or replace function public.audit_profile_privileges() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  if (new.role, new.branch_id) is distinct from (old.role, old.branch_id) then
+    perform public.record_audit(
+      'profile_privileges_changed', 'profile', new.id,
+      jsonb_build_object(
+        'from_role', old.role, 'to_role', new.role,
+        'from_branch', old.branch_id, 'to_branch', new.branch_id
+      ),
+      new.gym_id
+    );
+  end if;
+  return new;
+end $$;
+
+drop trigger if exists trg_audit_profile_privileges on public.profiles;
+create trigger trg_audit_profile_privileges after update on public.profiles
+  for each row execute function public.audit_profile_privileges();
+
+-- -----------------------------------------------------------------------------
+-- 2. Storage: member photos are private data, not "any signed-in user" data
+-- -----------------------------------------------------------------------------
+drop policy if exists member_photos_read on storage.objects;
+create policy member_photos_read on storage.objects
+  for select to authenticated
+  using (
+    bucket_id = 'member-photos'
+    and (
+      public.is_super_admin()
+      or public.is_reception()
+      or (storage.foldername(name))[1] = public.current_member_id()::text
+    )
+  );
+
+-- -----------------------------------------------------------------------------
+-- 3. Maintenance / audit functions are not for end users.
+--    Postgres grants EXECUTE to PUBLIC by default, so revoke there too.
+-- -----------------------------------------------------------------------------
+revoke execute on function public.expire_due_subscriptions()      from public, anon, authenticated;
+revoke execute on function public.enqueue_expiry_notifications()  from public, anon, authenticated;
+revoke execute on function public.record_audit(text, text, uuid, jsonb, uuid)
+                                                                  from public, anon, authenticated;
+
+-- -----------------------------------------------------------------------------
+-- 4. Password requests: no user enumeration, and a stale/hostile pending
+--    request can no longer lock the real owner out of the flow.
+--    Minimum length raised to 8 to match the project's auth policy.
+-- -----------------------------------------------------------------------------
+create or replace function public.request_password_change(
+  p_email text,
+  p_new_password text
+) returns void
+language plpgsql security definer set search_path = public, extensions as $$
+declare
+  v_user   auth.users;
+  v_prof   public.profiles;
+  v_member public.members;
+  v_name   text;
+begin
+  -- The only error we still surface: it is about the caller's own input and
+  -- reveals nothing about which accounts exist.
+  if p_new_password is null or length(p_new_password) < 8 then
+    raise exception 'weak_password';
+  end if;
+
+  select * into v_user from auth.users where lower(email) = lower(trim(p_email)) limit 1;
+  if not found then return; end if;                      -- silent: no enumeration
+
+  if (select count(*) from public.password_change_requests
+        where user_id = v_user.id and created_at > now() - interval '24 hours') >= 5 then
+    return;                                              -- silent rate limit
+  end if;
+
+  select * into v_prof from public.profiles where id = v_user.id;
+  if v_prof.member_id is not null then
+    select * into v_member from public.members where id = v_prof.member_id;
+  end if;
+  v_name := coalesce(v_prof.full_name, v_member.full_name, v_user.email);
+
+  -- Supersede any earlier pending request instead of rejecting the new one:
+  -- otherwise anyone could park a request on someone else's account.
+  update public.password_change_requests
+     set status = 'rejected', decided_at = now()
+   where user_id = v_user.id and status = 'pending';
+
+  insert into public.password_change_requests
+    (gym_id, user_id, member_id, branch_id, requested_email, requested_name, new_password_hash)
+  values (
+    v_prof.gym_id, v_user.id, v_prof.member_id, v_prof.branch_id,
+    v_user.email, v_name,
+    extensions.crypt(p_new_password, extensions.gen_salt('bf', 10))
+  );
+
+  perform public.record_audit('password_change_requested', 'user', v_user.id,
+    jsonb_build_object('email', v_user.email), v_prof.gym_id);
+end $$;
+
+grant execute on function public.request_password_change(text, text) to anon, authenticated;
+
+-- Staff-set passwords follow the same minimum.
+create or replace function public.staff_set_member_password(
+  p_member_id uuid,
+  p_new_password text
+) returns void
+language plpgsql security definer set search_path = public, extensions as $$
+declare v_member public.members;
+begin
+  if p_new_password is null or length(p_new_password) < 8 then
+    raise exception 'weak_password';
+  end if;
+  select * into v_member from public.members where id = p_member_id;
+  if not found then raise exception 'not_found'; end if;
+  if not (
+    (public.is_super_admin() and v_member.gym_id = public.current_gym_id())
+    or (public.is_reception() and v_member.branch_id = public.current_branch_id())
+  ) then
+    raise exception 'forbidden';
+  end if;
+  if v_member.user_id is null then raise exception 'no_account'; end if;
+
+  update auth.users
+     set encrypted_password = extensions.crypt(p_new_password, extensions.gen_salt('bf', 10)),
+         updated_at = now()
+   where id = v_member.user_id;
+
+  perform public.record_audit('password_set_by_staff', 'member', p_member_id,
+    jsonb_build_object('member', v_member.full_name), v_member.gym_id);
+end $$;
+
+grant execute on function public.staff_set_member_password(uuid, text) to authenticated;
+
+-- -----------------------------------------------------------------------------
+-- 5. Check-in: one visit per member per hour (guards session-based plans and
+--    keeps peak-hour analytics honest when a QR is scanned twice).
+-- -----------------------------------------------------------------------------
+create or replace function public.record_check_in(
+  p_member_id uuid,
+  p_branch_id uuid
+) returns public.check_ins
+language plpgsql security invoker as $$
+declare
+  v_sub    public.subscriptions;
+  v_today  date := public.riyadh_today();
+  v_check  public.check_ins;
+begin
+  select * into v_sub
+    from public.subscriptions
+   where member_id = p_member_id
+   order by (case status
+              when 'active' then 0 when 'frozen' then 1 when 'pending' then 2
+              when 'expired' then 3 else 4 end),
+            end_date desc nulls last
+   limit 1;
+
+  if not found then raise exception 'checkin_no_subscription'; end if;
+  if v_sub.status = 'pending' then raise exception 'checkin_pending'; end if;
+  if v_sub.status = 'frozen'  then raise exception 'checkin_frozen'; end if;
+  if v_sub.status in ('expired','cancelled')
+     or (v_sub.end_date is not null and v_sub.end_date < v_today) then
+    raise exception 'checkin_expired';
+  end if;
+  if v_sub.sessions_remaining is not null and v_sub.sessions_remaining <= 0 then
+    raise exception 'checkin_no_sessions';
+  end if;
+
+  if exists (
+    select 1 from public.check_ins ci
+     where ci.member_id = p_member_id
+       and ci.checked_in_at > now() - interval '1 hour'
+  ) then
+    raise exception 'checkin_duplicate';
+  end if;
+
+  insert into public.check_ins (member_id, branch_id, subscription_id, recorded_by)
+  values (p_member_id, p_branch_id, v_sub.id, auth.uid())
+  returning * into v_check;
+
+  if v_sub.sessions_remaining is not null then
+    update public.subscriptions
+       set sessions_remaining = sessions_remaining - 1
+     where id = v_sub.id;
+  end if;
+
+  return v_check;
+end $$;
+
+-- -----------------------------------------------------------------------------
+-- 6. Members may request ONE pending renewal at a time, never priced by them.
+--    The counter lives in a DEFINER helper: a subquery on `subscriptions`
+--    inside a policy on `subscriptions` would recurse.
+-- -----------------------------------------------------------------------------
+create or replace function public.member_pending_subs(p_member uuid) returns int
+language sql stable security definer set search_path = public as $$
+  select count(*)::int from public.subscriptions
+   where member_id = p_member and status = 'pending';
+$$;
+revoke execute on function public.member_pending_subs(uuid) from public, anon;
+grant execute on function public.member_pending_subs(uuid) to authenticated;
+
+drop policy if exists subs_member_request on public.subscriptions;
+create policy subs_member_request on public.subscriptions
+  for insert with check (
+    member_id = public.current_member_id()
+    and status = 'pending'
+    and coalesce(price_paid, 0) = 0
+    and public.member_pending_subs(public.current_member_id()) = 0
+  );
+
+-- -----------------------------------------------------------------------------
+-- 7. Staff invites: a secret token + expiry, not "whoever signs up with this
+--    address". The invitee passes the token as sign-up metadata; the bootstrap
+--    trigger promotes only on a token + email + not-expired match.
+-- -----------------------------------------------------------------------------
+alter table public.staff_invites
+  add column if not exists token text,
+  add column if not exists expires_at timestamptz not null default (now() + interval '7 days');
+
+update public.staff_invites
+   set token = encode(extensions.gen_random_bytes(16), 'hex')
+ where token is null;
+
+alter table public.staff_invites
+  alter column token set default encode(extensions.gen_random_bytes(16), 'hex');
+alter table public.staff_invites alter column token set not null;
+
+create unique index if not exists staff_invites_token_idx on public.staff_invites (token);
+
+create or replace function public.handle_new_user() returns trigger
+language plpgsql security definer set search_path = public as $$
+declare
+  only_gym uuid;
+  inv      public.staff_invites;
+  v_token  text := new.raw_user_meta_data->>'invite_token';
+begin
+  select id into only_gym from public.gyms limit 1;
+
+  if v_token is not null and length(v_token) > 0 then
+    select * into inv
+      from public.staff_invites
+     where token = v_token
+       and status = 'pending'
+       and expires_at > now()
+       and lower(email) = lower(new.email)
+     limit 1;
+  end if;
+
+  if inv.id is not null then
+    insert into public.profiles (id, gym_id, role, branch_id, full_name)
+    values (
+      new.id,
+      inv.gym_id,
+      inv.role,
+      inv.branch_id,
+      coalesce(inv.full_name, new.raw_user_meta_data->>'full_name', new.email)
+    )
+    on conflict (id) do update
+      set role = excluded.role, branch_id = excluded.branch_id, gym_id = excluded.gym_id;
+
+    update public.staff_invites
+       set status = 'accepted', accepted_at = now(), accepted_user_id = new.id
+     where id = inv.id;
+  else
+    insert into public.profiles (id, gym_id, role, full_name)
+    values (
+      new.id,
+      only_gym,
+      'member',
+      coalesce(new.raw_user_meta_data->>'full_name', new.email)
+    )
+    on conflict (id) do nothing;
+  end if;
+
+  return new;
+end $$;
+
+notify pgrst, 'reload schema';
+
+
+-- =============================================================================
+-- 0015_analytics_and_indexes.sql
+-- =============================================================================
+-- =============================================================================
+-- 0015_analytics_and_indexes.sql — performance work from the review
+--
+--  * members_overview: one row per member with the CURRENT subscription and the
+--    derived display status computed in SQL, so lists can filter/search/paginate
+--    on the server instead of shipping every member (with every subscription)
+--    to the browser. `security_invoker` keeps RLS in force (PG15+).
+--  * analytics_overview(): all dashboard aggregates in one call. The client used
+--    to pull raw rows and aggregate in JS, which silently truncated at PostgREST's
+--    max-rows = 1000 — check-in analytics would under-report with no warning.
+--  * Indexes the RLS policies and the new server-side search actually use.
+-- =============================================================================
+
+create extension if not exists pg_trgm;
+
+-- -----------------------------------------------------------------------------
+-- members_overview — member + current subscription + display status
+-- -----------------------------------------------------------------------------
+drop view if exists public.members_overview;
+create view public.members_overview with (security_invoker = true) as
+select
+  m.id,
+  m.gym_id,
+  m.branch_id,
+  m.member_code,
+  m.full_name,
+  m.phone,
+  m.national_id,
+  m.gender,
+  m.dob,
+  m.photo_url,
+  m.user_id,
+  m.created_at,
+  s.id                 as sub_id,
+  s.plan_id            as plan_id,
+  s.status             as sub_status,
+  s.start_date         as start_date,
+  s.end_date           as end_date,
+  s.sessions_remaining as sessions_remaining,
+  s.frozen_days_used   as frozen_days_used,
+  case
+    when s.id is null              then 'none'
+    when s.status = 'pending'      then 'pending'
+    when s.status = 'frozen'       then 'frozen'
+    when s.status = 'cancelled'    then 'expired'
+    when s.status = 'expired'      then 'expired'
+    when s.end_date is null        then 'active'
+    when s.end_date < public.riyadh_today()                 then 'expired'
+    when s.end_date <= public.riyadh_today() + 7            then 'expiring'
+    else 'active'
+  end as display_status
+from public.members m
+left join lateral (
+  select *
+    from public.subscriptions sub
+   where sub.member_id = m.id
+   order by (case sub.status
+               when 'active' then 0 when 'frozen' then 1 when 'pending' then 2
+               when 'expired' then 3 else 4 end),
+            sub.end_date desc nulls last,
+            sub.created_at desc
+   limit 1
+) s on true;
+
+grant select on public.members_overview to authenticated;
+
+-- -----------------------------------------------------------------------------
+-- analytics_overview — every dashboard aggregate in one round trip.
+-- SECURITY INVOKER: RLS still scopes the rows (admin = gym, reception = branch).
+-- Dates are bucketed in Asia/Riyadh, matching the rest of the system.
+-- -----------------------------------------------------------------------------
+create or replace function public.analytics_overview(
+  p_from   date,
+  p_to     date,
+  p_branch uuid default null
+) returns jsonb
+language plpgsql stable security invoker set search_path = public as $$
+declare
+  v_today       date := public.riyadh_today();
+  v_month_start date := date_trunc('month', v_today)::date;
+  v_from_ts     timestamptz := (p_from::timestamp at time zone 'Asia/Riyadh');
+  v_to_ts       timestamptz := ((p_to + 1)::timestamp at time zone 'Asia/Riyadh');
+  v_months      jsonb;
+  v_growth      jsonb;
+  v_plans       jsonb;
+  v_heat        jsonb;
+  v_kpis        jsonb;
+begin
+  -- Revenue per month (total + per branch)
+  with months as (
+    select generate_series(
+             date_trunc('month', p_from::timestamp),
+             date_trunc('month', p_to::timestamp),
+             interval '1 month')::date as m
+  ),
+  pay as (
+    select date_trunc('month', p.created_at at time zone 'Asia/Riyadh')::date as m,
+           p.branch_id,
+           p.amount
+      from public.payments p
+     where p.created_at >= v_from_ts
+       and p.created_at <  v_to_ts
+       and (p_branch is null or p.branch_id = p_branch)
+  )
+  select coalesce(jsonb_agg(
+           jsonb_build_object(
+             'month', to_char(months.m, 'YYYY-MM'),
+             'total', coalesce((select sum(pay.amount) from pay where pay.m = months.m), 0),
+             'branches', coalesce((
+               select jsonb_object_agg(q.branch_id, q.s)
+                 from (select pay.branch_id, sum(pay.amount) as s
+                         from pay
+                        where pay.m = months.m and pay.branch_id is not null
+                        group by pay.branch_id) q
+             ), '{}'::jsonb)
+           ) order by months.m), '[]'::jsonb)
+    into v_months
+    from months;
+
+  -- Cumulative member growth per month
+  with months as (
+    select generate_series(
+             date_trunc('month', p_from::timestamp),
+             date_trunc('month', p_to::timestamp),
+             interval '1 month')::date as m
+  )
+  select coalesce(jsonb_agg(
+           jsonb_build_object(
+             'month', to_char(months.m, 'YYYY-MM'),
+             'count', (select count(*) from public.members mm
+                        where (p_branch is null or mm.branch_id = p_branch)
+                          and mm.created_at < ((months.m + interval '1 month')::timestamp
+                                                at time zone 'Asia/Riyadh'))
+           ) order by months.m), '[]'::jsonb)
+    into v_growth
+    from months;
+
+  -- Plan popularity by CURRENT subscription
+  select coalesce(jsonb_agg(jsonb_build_object('plan_id', q.plan_id, 'count', q.c)), '[]'::jsonb)
+    into v_plans
+    from (
+      select mo.plan_id, count(*) as c
+        from public.members_overview mo
+       where mo.plan_id is not null
+         and (p_branch is null or mo.branch_id = p_branch)
+       group by mo.plan_id
+    ) q;
+
+  -- Check-in heatmap (day of week 0=Sun, hour 0-23, Riyadh time)
+  select coalesce(jsonb_agg(jsonb_build_object('dow', q.d, 'hour', q.h, 'count', q.c)), '[]'::jsonb)
+    into v_heat
+    from (
+      select extract(dow  from c.checked_in_at at time zone 'Asia/Riyadh')::int as d,
+             extract(hour from c.checked_in_at at time zone 'Asia/Riyadh')::int as h,
+             count(*) as c
+        from public.check_ins c
+       where c.checked_in_at >= v_from_ts
+         and c.checked_in_at <  v_to_ts
+         and (p_branch is null or c.branch_id = p_branch)
+       group by 1, 2
+    ) q;
+
+  -- KPIs
+  with scoped as (
+    select mo.id, mo.display_status, mo.created_at,
+           (select count(*) from public.subscriptions s
+             where s.member_id = mo.id and s.status <> 'pending') as real_subs
+      from public.members_overview mo
+     where (p_branch is null or mo.branch_id = p_branch)
+  ),
+  rev as (
+    select coalesce(sum(p.amount), 0) as total
+      from public.payments p
+     where (p_branch is null or p.branch_id = p_branch)
+       and p.created_at >= (v_month_start::timestamp at time zone 'Asia/Riyadh')
+  )
+  select jsonb_build_object(
+           'active',        count(*) filter (where display_status in ('active','expiring')),
+           'expiring',      count(*) filter (where display_status = 'expiring'),
+           'expired',       count(*) filter (where display_status = 'expired'),
+           'total_members', count(*),
+           'new_month',     count(*) filter (
+                              where created_at >= (v_month_start::timestamp at time zone 'Asia/Riyadh')),
+           'revenue_month', (select total from rev),
+           'renewal_rate',  case when count(*) filter (where real_subs > 0) = 0 then 0
+                              else round(100.0 * count(*) filter (where real_subs > 1)
+                                             / count(*) filter (where real_subs > 0)) end,
+           'churn_rate',    case when count(*) filter (where real_subs > 0) = 0 then 0
+                              else round(100.0 * count(*) filter (where real_subs > 0
+                                                                    and display_status = 'expired')
+                                             / count(*) filter (where real_subs > 0)) end
+         )
+    into v_kpis
+    from scoped;
+
+  return jsonb_build_object(
+    'kpis',            v_kpis,
+    'revenue_by_month', v_months,
+    'member_growth',    v_growth,
+    'plan_popularity',  v_plans,
+    'heatmap',          v_heat
+  );
+end $$;
+
+grant execute on function public.analytics_overview(date, date, uuid) to authenticated;
+
+-- -----------------------------------------------------------------------------
+-- Indexes: RLS filters + the new server-side member search
+-- -----------------------------------------------------------------------------
+create index if not exists idx_payments_gym        on public.payments(gym_id);
+create index if not exists idx_payments_gym_created on public.payments(gym_id, created_at desc);
+create index if not exists idx_notif_gym           on public.notifications(gym_id);
+create index if not exists idx_checkins_branch_at  on public.check_ins(branch_id, checked_in_at desc);
+create index if not exists idx_subs_member_status  on public.subscriptions(member_id, status);
+create index if not exists idx_members_gym_created on public.members(gym_id, created_at desc);
+create index if not exists idx_members_name_trgm   on public.members using gin (full_name gin_trgm_ops);
+create index if not exists idx_members_phone_trgm  on public.members using gin (phone gin_trgm_ops);
+
+notify pgrst, 'reload schema';

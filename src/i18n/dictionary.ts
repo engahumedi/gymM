@@ -101,7 +101,7 @@ export const dictionary = {
   'err.checkin_no_sessions': { ar: 'لا توجد حصص متبقية', en: 'No remaining sessions' },
   'err.already_member': { ar: 'هذا الحساب مسجّل كعضو بالفعل', en: 'This account is already a member' },
   'err.email_taken': { ar: 'البريد الإلكتروني مستخدم مسبقاً', en: 'Email is already in use' },
-  'err.weak_password': { ar: 'كلمة المرور ضعيفة (6 أحرف على الأقل)', en: 'Password too weak (min 6 chars)' },
+  'err.weak_password': { ar: 'كلمة المرور ضعيفة (8 أحرف على الأقل)', en: 'Password too weak (min 8 chars)' },
 
   // --- public website ---
   'pub.plans.title': { ar: 'الباقات والأسعار', en: 'Plans & Pricing' },
@@ -560,7 +560,7 @@ export const dictionary = {
   'pwreq.confirm': { ar: 'تأكيد كلمة المرور', en: 'Confirm password' },
   'pwreq.submit': { ar: 'إرسال الطلب', en: 'Send request' },
   'pwreq.sent': { ar: 'تم إرسال طلبك للإدارة. ستُفعّل كلمة المرور الجديدة بعد الموافقة.', en: 'Your request was sent to staff. The new password activates once approved.' },
-  'pwreq.err.invalid': { ar: 'تحقّق من البريد وكلمة المرور (٦ أحرف على الأقل).', en: 'Check the email and password (at least 6 characters).' },
+  'pwreq.err.invalid': { ar: 'تحقّق من البريد وكلمة المرور (٨ أحرف على الأقل).', en: 'Check the email and password (at least 8 characters).' },
   'pwreq.err.mismatch': { ar: 'كلمتا المرور غير متطابقتين.', en: 'The passwords do not match.' },
   'pwreq.err.no_user': { ar: 'لا يوجد حساب بهذا البريد.', en: 'No account with that email.' },
   'pwreq.err.exists': { ar: 'لديك طلب معلّق بالفعل. انتظر قرار الإدارة.', en: 'You already have a pending request. Please wait for staff.' },
@@ -610,6 +610,56 @@ export const dictionary = {
   'audit.action.subscription_expired': { ar: 'انتهاء اشتراك', en: 'Subscription expired' },
   'audit.action.subscription_cancelled': { ar: 'إلغاء اشتراك', en: 'Subscription cancelled' },
   'audit.action.subscription_pending': { ar: 'اشتراك معلّق', en: 'Subscription pending' },
+  'audit.action.profile_privileges_changed': { ar: 'تغيير صلاحيات مستخدم', en: 'User privileges changed' },
+
+  // --- Added in the hardening / performance pass ---
+  'common.load_more': { ar: 'عرض المزيد', en: 'Load more' },
+  'common.showing': { ar: 'معروض', en: 'Showing' },
+  'common.of': { ar: 'من', en: 'of' },
+  'common.retry': { ar: 'إعادة المحاولة', en: 'Retry' },
+  'common.list_sep': { ar: '،', en: ',' },
+
+  'error.boundary.title': { ar: 'حدث خطأ غير متوقع', en: 'Something went wrong' },
+  'error.boundary.body': {
+    ar: 'تعذّر عرض هذه الصفحة. جرّب إعادة التحميل، وإن تكرر الخطأ راجع الإدارة.',
+    en: 'This page could not be displayed. Try reloading; if it keeps happening, contact an admin.',
+  },
+  'error.boundary.reload': { ar: 'إعادة التحميل', en: 'Reload' },
+
+  'err.checkin_duplicate': {
+    ar: 'سُجّل دخول هذا العضو خلال الساعة الماضية',
+    en: 'This member already checked in within the last hour',
+  },
+  'err.no_account': { ar: 'لا يوجد حساب دخول لهذا العضو', en: 'This member has no login account' },
+  'err.invite_invalid': {
+    ar: 'رابط الدعوة غير صالح أو منتهي الصلاحية — اطلب رابطاً جديداً من الإدارة.',
+    en: 'This invite link is invalid or expired — ask an admin for a new one.',
+  },
+
+  'pwreq.submitted': {
+    ar: 'إذا كان البريد مسجّلاً لدينا فسيصل الطلب إلى موظفي النادي. راجع الاستقبال لتأكيد هويتك.',
+    en: 'If that email is registered, staff will receive the request. Visit reception to confirm your identity.',
+  },
+
+  'staff.invite.expires': { ar: 'تنتهي صلاحية الرابط بعد ٧ أيام', en: 'Link expires in 7 days' },
+  'staff.invite.expired': { ar: 'منتهية الصلاحية', en: 'Expired' },
+  'staff.signup.no_token': {
+    ar: 'افتح رابط الدعوة الذي أرسلته لك الإدارة لإنشاء حسابك.',
+    en: 'Open the invite link an admin sent you to create your account.',
+  },
+
+  'portal.renewal_pending': {
+    ar: 'لديك طلب تجديد قيد المراجعة — لا يمكن إرسال طلب آخر حتى يُفعَّل.',
+    en: 'You already have a renewal request pending — you cannot send another until it is activated.',
+  },
+
+  'day.sun': { ar: 'أحد', en: 'Sun' },
+  'day.mon': { ar: 'اثنين', en: 'Mon' },
+  'day.tue': { ar: 'ثلاثاء', en: 'Tue' },
+  'day.wed': { ar: 'أربعاء', en: 'Wed' },
+  'day.thu': { ar: 'خميس', en: 'Thu' },
+  'day.fri': { ar: 'جمعة', en: 'Fri' },
+  'day.sat': { ar: 'سبت', en: 'Sat' },
 } as const;
 
 export type MessageKey = keyof typeof dictionary;

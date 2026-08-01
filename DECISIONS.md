@@ -334,3 +334,85 @@
 - **Unit tests target pure `lib/` logic** (`phone`, `subscriptionStatus`, `csv`, `analytics`) with
   Vitest reusing the Vite config's `@` alias — no DOM/network, fast, deterministic. They immediately
   paid for themselves by surfacing the `normalizeSaudiPhone` slice bug, fixed in source.
+
+## Security + performance pass (0014–0015)
+
+Driven by a full review of the live system; every finding below was reproduced against the real
+project before it was fixed, and re-tested after.
+
+### Security (0014)
+
+- **Privilege escalation was the real bug, and RLS alone could not express the fix.**
+  `profiles_self_update` allowed `using (id = auth.uid())` with no column restriction, so any member
+  could `PATCH` its own row to `role = 'super_admin'` (verified live: the demo member went from 1
+  visible member to all 50, plus payments and the audit log). Postgres RLS has no column-level
+  `WITH CHECK`, and column-level `GRANT`s would also strip the super-admin's legitimate ability to
+  reassign staff, so the guard is a **BEFORE UPDATE trigger**: privileged columns
+  (`role`, `branch_id`, `member_id`, `gym_id`) may only change when the caller is a super admin.
+  The trigger is deliberately **SECURITY INVOKER** — `current_user` is then `authenticated` for
+  browser traffic but the function owner inside a SECURITY DEFINER RPC, which is exactly what lets
+  `public_join` keep setting `member_id` on the joining user while the browser cannot.
+  A second AFTER trigger (DEFINER, so it can write `audit_log`) records every role/branch change:
+  privilege changes were previously invisible in the audit log.
+
+- **`EXECUTE` is granted to `PUBLIC` by default in Postgres**, so "granted to authenticated" was
+  never the whole story: `expire_due_subscriptions`, `enqueue_expiry_notifications` and
+  `record_audit` were callable by any signed-in user (the last one meaning a member could forge
+  audit entries). All three are revoked from `public, anon, authenticated`; pg_cron and the DEFINER
+  callers run as the owner and are unaffected.
+
+- **Password requests no longer answer "does this email exist?"** `request_password_change` now
+  returns silently for an unknown email and for a rate-limited caller — only `weak_password`, which
+  is about the caller's own input, still raises. It also **supersedes** an existing pending request
+  instead of failing with `request_exists`: since the RPC is open to `anon`, the old behaviour let
+  anyone park a request on a victim's account and block the real owner from filing one.
+
+- **Check-in is idempotent within an hour.** `record_check_in` raises `checkin_duplicate` if the
+  member already checked in in the last 60 minutes. Sequential `member_code`s make QR codes
+  guessable, and a double scan both burned a session on session-based plans and inflated the
+  peak-hours analytics. Paired with a client-side confirmation step before a scanned check-in is
+  recorded, so a scan is reviewed by a human, not executed blindly.
+
+- **Members get one pending renewal, priced by the gym.** The `subs_member_request` policy now also
+  requires `price_paid = 0` and no existing pending row. The counter lives in a SECURITY DEFINER
+  helper (`member_pending_subs`) because a subquery on `subscriptions` inside a policy on
+  `subscriptions` would recurse.
+
+- **Staff invites need a secret, not just an address.** With email autoconfirm on (required by the
+  public Join flow), email ownership is never proven, so "whoever signs up with the invited address
+  becomes reception" was a takeover path. Invites now carry a random `token` and a 7-day
+  `expires_at`; the invitee passes the token as sign-up metadata and `handle_new_user()` promotes
+  only on a token + email + not-expired match. Verified live in all three directions: no token →
+  member, valid token → reception at the invited branch, expired token → member.
+
+- **Member photos are private again.** The storage policy read `bucket_id = 'member-photos'` for any
+  authenticated user, so any member could list the bucket and pull every member's photo. Now
+  staff-only plus the member's own folder (`storage.foldername(name)[1]`).
+
+- **Password minimum is 8**, enforced in the RPCs *and* in the project's auth config (GoTrue) so
+  it cannot be bypassed by calling the auth API directly. Captcha on the public forms is still the
+  one item left open: it needs a provider account/secret, and half-wiring it would be worse than
+  documenting it.
+
+### Performance (0015)
+
+- **PostgREST caps every response at `max_rows = 1000` on this project.** That silently truncated
+  `fetchAllCheckIns().limit(5000)` — analytics would have under-reported with no error once the gym
+  passed 1000 check-ins (about two months of real traffic). This is the reason aggregation moved to
+  SQL rather than a pure client-side optimisation: `analytics_overview()` returns KPIs, revenue by
+  month/branch, member growth, plan popularity and the check-in heatmap as one `jsonb` document,
+  bucketed in Asia/Riyadh, and it is **SECURITY INVOKER** so RLS still scopes exactly what each role
+  may aggregate. Verified against direct SQL: 303/303 check-ins in the heatmap, 21,100 revenue in
+  window, 26 active / 8 expiring / 19 expired — all matching.
+
+- **`members_overview` is a `security_invoker` view** (PG15+), not a table or a DEFINER function:
+  the current subscription and the derived display status (`active | expiring | expired | frozen |
+  pending | none`) are computed in SQL via a lateral join, while RLS on `members`/`subscriptions`
+  keeps applying untouched — confirmed live at 50 rows for the admin, 25 for reception, 1 for the
+  member, 0 for anon. This is what makes server-side search, status filtering and pagination
+  possible; the browser no longer downloads every member with every subscription on five screens.
+
+- **Indexes follow the policies and the new search**: `payments(gym_id[, created_at])`,
+  `notifications(gym_id)`, `check_ins(branch_id, checked_in_at)`, `subscriptions(member_id, status)`,
+  `members(gym_id, created_at)`, plus **pg_trgm** GIN indexes on `members.full_name` / `phone` so the
+  `ilike` search stays fast as the member table grows.
