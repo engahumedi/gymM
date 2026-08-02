@@ -36,6 +36,19 @@ export function formatCurrency(amount: number | null | undefined, locale: Locale
   }).format(n);
 }
 
+// Prices on the marketing site are round numbers shown at display size, where
+// a trailing ",00" is noise that also overflows the card. Falls back to the
+// full format the moment there are real halalas.
+export function formatPrice(amount: number | null | undefined, locale: Locale): string {
+  const n = amount ?? 0;
+  if (!Number.isInteger(n)) return formatCurrency(n, locale);
+  return new Intl.NumberFormat(loc(locale), {
+    style: 'currency',
+    currency: 'SAR',
+    maximumFractionDigits: 0,
+  }).format(n);
+}
+
 // Days until a date (Riyadh), negative if past.
 export function daysUntil(dateStr: string | null | undefined): number | null {
   if (!dateStr) return null;

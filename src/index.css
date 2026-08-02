@@ -33,10 +33,13 @@
      blocks. Source: ui-ux-pro-max — Fitness/Gym -> "Vibrant & Block-based
      + Dark Mode (OLED)".
      --------------------------------------------------------------------- */
-  --ground: #08090b;      /* deeper than --bg: blocks need to sit ON something */
-  --block: #101317;
-  --block-2: #171b21;
+  --ground: #000000;      /* the marketing site sits on true black */
+  --block: #0c0e11;
+  --block-2: #14171c;
   --block-line: #23282f;
+  --paper: #f2ece1;       /* the one light band — a deliberate tonal break */
+  --paper-ink: #101215;
+  --paper-muted: #575249;
   color-scheme: dark;
 }
 
@@ -132,4 +135,33 @@ select option { background: var(--surface); color: var(--text); }
   .block-panel {
     transition: none;
   }
+}
+
+/* Oversized display type for the marketing hero: weight 900, tight tracking,
+   fluid from phone to desktop (ui-ux-pro-max — "Exaggerated Minimalism"). */
+.display-xl {
+  font-size: clamp(2.75rem, 10vw, 8.5rem);
+  line-height: 0.86;
+  letter-spacing: -0.04em;
+  font-weight: 900;
+}
+.display-lg {
+  font-size: clamp(2.25rem, 6vw, 4.5rem);
+  line-height: 0.95;
+  letter-spacing: -0.03em;
+  font-weight: 900;
+}
+
+/* Ticker: a single strip duplicated, translated by exactly -50% so the loop is
+   seamless. Pure transform, so it never triggers layout. */
+@keyframes ticker { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+.ticker-track {
+  display: flex;
+  width: max-content;
+  animation: ticker 32s linear infinite;
+}
+html[dir='rtl'] .ticker-track { animation-direction: reverse; }
+
+@media (prefers-reduced-motion: reduce) {
+  .ticker-track { animation: none; }
 }
