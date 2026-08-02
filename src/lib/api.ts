@@ -480,6 +480,101 @@ export async function fetchAnalyticsOverview(
   };
 }
 
+// ---- Monthly financial report (aggregated in SQL) -------------------------
+// One RLS-scoped call per month: a reception user gets their own branch, a
+// super admin the whole gym. Same reason as analytics — the raw payment rows
+// would truncate at PostgREST's 1000-row cap and aggregate wrongly.
+
+export interface ReportSlice {
+  total: number;
+  count: number;
+}
+
+export interface BranchSlice extends ReportSlice {
+  branch_id: string | null;
+}
+export interface PlanSlice extends ReportSlice {
+  plan_id: string | null;
+}
+export interface MethodSlice extends ReportSlice {
+  method: PaymentMethod;
+}
+
+export interface MonthlyReport {
+  month: string;
+  prev_month: string;
+  revenue: number;
+  revenue_prev: number;
+  payments_count: number;
+  by_branch: BranchSlice[];
+  by_plan: PlanSlice[];
+  by_method: MethodSlice[];
+  new_members: number;
+  active_members: number;
+  generated_at: string;
+}
+
+const PAYMENT_METHOD_VALUES: PaymentMethod[] = ['cash', 'mada', 'online', 'other'];
+
+function asMethod(v: unknown): PaymentMethod {
+  return PAYMENT_METHOD_VALUES.find((m) => m === v) ?? 'other';
+}
+
+// `month` is 'YYYY-MM' (what <input type="month"> produces); the RPC takes a
+// date and truncates it to the month itself.
+export async function fetchMonthlyReport(
+  month: string,
+  branchId: string | null,
+): Promise<MonthlyReport> {
+  const raw = await rpcCall('monthly_report', {
+    p_month: `${month}-01`,
+    p_branch: branchId,
+  });
+  return {
+    month: raw?.month ?? month,
+    prev_month: raw?.prev_month ?? '',
+    revenue: num(raw?.revenue),
+    revenue_prev: num(raw?.revenue_prev),
+    payments_count: num(raw?.payments_count),
+    by_branch: (raw?.by_branch ?? []).map((r) => ({
+      branch_id: r.branch_id ?? null,
+      total: num(r.total),
+      count: num(r.count),
+    })),
+    by_plan: (raw?.by_plan ?? []).map((r) => ({
+      plan_id: r.plan_id ?? null,
+      total: num(r.total),
+      count: num(r.count),
+    })),
+    by_method: (raw?.by_method ?? []).map((r) => ({
+      method: asMethod(r.method),
+      total: num(r.total),
+      count: num(r.count),
+    })),
+    new_members: num(raw?.new_members),
+    active_members: num(raw?.active_members),
+    generated_at: raw?.generated_at ?? '',
+  };
+}
+
+// ---- Sign in by phone -----------------------------------------------------
+// Supabase Auth signs in by email, but members know their phone number and an
+// SMS provider costs money. This RPC hands back the account's email ONLY when
+// the password given already verifies against it, so it cannot be used to map
+// phone numbers to emails; the caller then does an ordinary email sign-in.
+// Returns null for a wrong password, an unknown phone, or a member with no
+// account — the caller must not distinguish between them in the UI.
+export async function loginEmailForPhone(
+  phone: string,
+  password: string,
+): Promise<string | null> {
+  const email = await rpcCall('login_email_for_phone', {
+    p_phone: phone,
+    p_password: password,
+  });
+  return email ?? null;
+}
+
 // Today's check-ins at the current scope (for the check-in screen feed).
 export interface CheckInWithMember extends CheckIn {
   members: { full_name: string; member_code: string | null } | null;

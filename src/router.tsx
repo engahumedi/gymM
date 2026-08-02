@@ -74,6 +74,11 @@ const ReceiptView = lazy(() =>
 const MembershipCard = lazy(() =>
   import('@/pages/MembershipCard').then((m) => ({ default: m.MembershipCard })),
 );
+// Same reason as the receipt: a top-level route, so window.print() yields the
+// report on its own with no dashboard chrome around it.
+const MonthlyReport = lazy(() =>
+  import('@/pages/MonthlyReport').then((m) => ({ default: m.MonthlyReport })),
+);
 
 // Every lazy route element waits behind the same calm full-page spinner.
 const deferred = (node: ReactNode) => <Suspense fallback={<FullPageSpinner />}>{node}</Suspense>;
@@ -106,6 +111,14 @@ export const router = createHashRouter([
     errorElement,
     element: (
       <RequireRole allow={['super_admin', 'reception']}>{deferred(<ReceiptView />)}</RequireRole>
+    ),
+  },
+
+  {
+    path: '/report/monthly',
+    errorElement,
+    element: (
+      <RequireRole allow={['super_admin', 'reception']}>{deferred(<MonthlyReport />)}</RequireRole>
     ),
   },
 

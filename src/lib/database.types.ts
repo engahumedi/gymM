@@ -283,6 +283,23 @@ export type AnalyticsOverviewRaw = {
   heatmap?: { dow?: unknown; hour?: unknown; count?: unknown }[];
 };
 
+// Exactly what monthly_report() returns (migration 0017). Same story as above:
+// sums arrive as JSON numbers or strings depending on the driver, so every
+// numeric is `unknown` here and coerced once in the api layer.
+export type MonthlyReportRaw = {
+  month?: string;
+  prev_month?: string;
+  revenue?: unknown;
+  revenue_prev?: unknown;
+  payments_count?: unknown;
+  by_branch?: { branch_id?: string | null; total?: unknown; count?: unknown }[];
+  by_plan?: { plan_id?: string | null; total?: unknown; count?: unknown }[];
+  by_method?: { method?: string | null; total?: unknown; count?: unknown }[];
+  new_members?: unknown;
+  active_members?: unknown;
+  generated_at?: string;
+};
+
 type Row<T> = { Row: T; Insert: Partial<T>; Update: Partial<T>; Relationships: [] };
 
 export type Database = {
@@ -316,6 +333,19 @@ export type Database = {
       analytics_overview: {
         Args: { p_from: string; p_to: string; p_branch?: string | null };
         Returns: AnalyticsOverviewRaw;
+      };
+      // Sign in by phone (migration 0017). Callable by `anon` — it is the step
+      // BEFORE a session exists. Returns the account's email only when the
+      // supplied password already verifies against it, else null.
+      login_email_for_phone: {
+        Args: { p_phone: string; p_password: string };
+        Returns: string | null;
+      };
+      // The month's money in one RLS-scoped call (migration 0017). p_month is
+      // any date inside the month; the function truncates it.
+      monthly_report: {
+        Args: { p_month: string; p_branch?: string | null };
+        Returns: MonthlyReportRaw;
       };
       create_subscription: {
         Args: {

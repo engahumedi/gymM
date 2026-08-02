@@ -10,6 +10,8 @@ export function errorMessageKey(message: string | null | undefined): MessageKey 
   if (m.includes('members_phone_unique') || m.includes('duplicate key') && m.includes('phone'))
     return 'err.duplicate_phone';
   if (m.includes('members_phone_saudi') || m.includes('invalid_phone')) return 'err.invalid_phone';
+  // Too many sign-in-by-phone attempts on one number (migration 0017).
+  if (m.includes('rate_limited') || m.includes('too many requests')) return 'err.rate_limited';
   if (m.includes('freeze_cap_exceeded')) return 'err.freeze_cap';
   if (m.includes('not_active')) return 'err.not_active';
   if (m.includes('not_frozen')) return 'err.not_frozen';
