@@ -504,3 +504,12 @@ project before it was fixed, and re-tested after.
   across 7 for the branch, same month. Amounts are bucketed in Asia/Riyadh like everything else.
 - **The report is a top-level print route**, not a dashboard tab, for the same reason as the receipt
   and the membership card: `window.print()` then yields the report alone, with no navigation chrome.
+
+- **Arabic dates were rendering in the Hijri calendar.** Browsers resolve a bare `ar-SA` to
+  Umm al-Qura — Chrome shows a subscription ending 2026-07-15 as "١ صفر ١٤٤٨ هـ" — while every
+  date in this system is stored, computed and counted in Gregorian, including the days-remaining
+  counter sitting right next to that expiry date. A Hijri label beside a Gregorian day count is
+  worse than either alone, and a receipt whose date cannot be matched against a bank statement is
+  worse still, so `format.ts` pins `ar-SA-u-ca-gregory`. Arabic-Indic numerals are unaffected.
+  Node's ICU happens to default to Gregorian, so the regression test asserts the locale tag rather
+  than the formatted output — an output check passes in Vitest and still ships the bug.
