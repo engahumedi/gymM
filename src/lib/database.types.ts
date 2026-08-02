@@ -21,6 +21,10 @@ export type Profile = {
   created_at: string;
 }
 
+// Which calendar the gym leads with in the UI (migration 0019). Storage and
+// every date calculation stay Gregorian regardless.
+export type GymCalendar = 'hijri' | 'gregorian';
+
 export type Gym = {
   id: string;
   name_ar: string;
@@ -31,6 +35,7 @@ export type Gym = {
   contact_email: string | null;
   contact_phone: string | null;
   social_links: Record<string, string>;
+  calendar: GymCalendar;
   created_at: string;
 }
 

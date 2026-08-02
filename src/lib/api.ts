@@ -828,6 +828,7 @@ export type GymPatch = Partial<
     | 'contact_email'
     | 'contact_phone'
     | 'social_links'
+    | 'calendar'
   >
 >;
 

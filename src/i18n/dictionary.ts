@@ -513,6 +513,15 @@ export const dictionary = {
   'method.online': { ar: 'إلكتروني', en: 'Online' },
   'method.other': { ar: 'أخرى', en: 'Other' },
 
+  // --- calendars (0019) ---
+  'cal.hijri': { ar: 'هجري', en: 'Hijri' },
+  'cal.gregorian': { ar: 'ميلادي', en: 'Gregorian' },
+  'cal.setting': { ar: 'التقويم المعروض أولاً', en: 'Calendar shown first' },
+  'cal.setting_hint': {
+    ar: 'التاريخان يظهران معاً دائماً؛ هذا يحدّد أيّهما يُعرض أولاً. التخزين والحسابات ميلادية دائماً.',
+    en: 'Both dates always appear; this only sets which one comes first. Storage and calculations stay Gregorian.',
+  },
+
   // Staff
   'staff.title': { ar: 'الموظفون', en: 'Staff' },
   'staff.invite': { ar: 'دعوة موظف', en: 'Invite staff' },

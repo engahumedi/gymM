@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import { fetchPublicSiteData, readCachedSiteData } from './api';
 import { localizedName } from './display';
+import { setGymCalendar } from './format';
 import { useI18n } from '@/i18n/I18nProvider';
 import type { Locale } from '@/i18n/dictionary';
 import type { Gym } from './database.types';
@@ -107,6 +108,9 @@ export function BrandProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     applyBrandColors(gym);
+    // Dates read Hijri-first or Gregorian-first depending on the gym's own
+    // setting, so this has to land before anything formats a date.
+    setGymCalendar(gym?.calendar);
   }, [gym]);
 
   useEffect(() => {

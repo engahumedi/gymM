@@ -513,3 +513,24 @@ project before it was fixed, and re-tested after.
   worse still, so `format.ts` pins `ar-SA-u-ca-gregory`. Arabic-Indic numerals are unaffected.
   Node's ICU happens to default to Gregorian, so the regression test asserts the locale tag rather
   than the formatted output — an output check passes in Vitest and still ships the bug.
+
+## Hijri and Gregorian together (0019)
+
+- **Both calendars, always — the gym only chooses which one leads.** The first client reads Hijri,
+  but the same dates get reconciled against bank statements, VAT filings and supplier invoices in
+  Gregorian, so dropping either one costs somebody real work. `formatDate` now returns
+  `primary · secondary` and `formatDateDual` exposes the pair for layouts that want to style them
+  differently.
+- **The preference is a column on `gyms`, not a constant.** This is a white-label product: the next
+  client may lead with Gregorian, and neither should need a code change. `BrandProvider` pushes it
+  into the formatter at boot, next to the brand colour, so a single setting re-dates the whole app
+  the same way a single setting re-skins it.
+- **Storage and arithmetic stay Gregorian, always.** The calendar setting is presentation only —
+  `daysUntil`, expiry maths, the cron job and every report bucket are untouched by it, and a test
+  asserts that the day count is identical under either setting. Mixing display and arithmetic is
+  how this feature would quietly corrupt subscription dates.
+- **Date inputs stay native.** No browser offers a Hijri date picker, and hand-rolling a calendar
+  widget would be a large, bug-prone surface for a field that is entered rarely. The native
+  (Gregorian) input keeps working and the chosen date is echoed underneath in the leading calendar,
+  so the person typing sees both without converting anything in their head. The report's month
+  picker shows the Hijri *span*, since a Gregorian month straddles two Hijri months.
