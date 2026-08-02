@@ -127,7 +127,7 @@ export function MemberForm() {
           <TextInput value={form.full_name} onChange={(e) => set('full_name', e.target.value)} />
         </Field>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field label={t('member.field.phone')} required error={fieldErr.phone ? t('err.invalid_phone') : undefined}>
             <TextInput dir="ltr" placeholder="05XXXXXXXX" value={form.phone} onChange={(e) => set('phone', e.target.value)} />
           </Field>
@@ -136,7 +136,7 @@ export function MemberForm() {
           </Field>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field label={t('member.field.gender')}>
             <SelectInput value={form.gender} onChange={(e) => set('gender', e.target.value)}>
               <option value="">—</option>
@@ -168,7 +168,7 @@ export function MemberForm() {
           <TextInput type="file" accept="image/*" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
         </Field>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field label={t('member.field.emergency_name')}>
             <TextInput value={form.emergency_contact_name} onChange={(e) => set('emergency_contact_name', e.target.value)} />
           </Field>
@@ -183,7 +183,7 @@ export function MemberForm() {
 
         <ErrorText error={error} />
 
-        <div className="flex gap-2">
+        <div className="grid grid-cols-2 gap-2 sm:flex">
           <Button type="submit" loading={saving}>{t('common.save')}</Button>
           <Button type="button" variant="secondary" onClick={() => navigate(-1)}>{t('common.cancel')}</Button>
         </div>

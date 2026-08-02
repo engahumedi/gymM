@@ -56,7 +56,7 @@ export function PortalHome() {
           <StatusBadge status={status} />
         </div>
         {current && current.status !== 'pending' ? (
-          <div className="flex flex-wrap items-end gap-x-10 gap-y-4">
+          <div className="flex flex-wrap items-end gap-x-8 gap-y-4 sm:gap-x-10">
             <div>
               <p className="text-xs text-muted">{t('portal.plan')}</p>
               <p className="mt-1 font-medium text-text">{planName(current.plan_id)}</p>
@@ -92,7 +92,7 @@ export function PortalHome() {
         )}
 
         {(!hasPending || current?.status === 'active') && (
-          <div className="mt-5 flex flex-wrap items-center gap-3">
+          <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
             {!hasPending && (
               <Button onClick={() => setAsking(true)}>
                 {t('portal.request_renewal')}
@@ -110,15 +110,20 @@ export function PortalHome() {
       {/* Membership QR — reception scans this to check the member in */}
       {member.data?.member_code && (
         <Card>
-          <div className="flex items-center gap-5">
-            <div className="shrink-0 rounded bg-white p-2.5">
+          {/* On a phone the 104px code plus a paragraph does not fit on one
+              line, so it stacks; from sm upwards it is the original row. */}
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-5">
+            <div className="w-fit shrink-0 rounded bg-white p-2.5">
               <QRCodeSVG value={member.data.member_code} size={104} bgColor="#ffffff" fgColor="#0d0f12" level="M" />
             </div>
-            <div>
+            <div className="min-w-0">
               <h2 className="text-sm font-semibold text-muted">{t('portal.qr.title')}</h2>
               <p className="mt-1 text-sm text-text">{t('portal.qr.hint')}</p>
-              <p dir="ltr" className="font-display mt-2 text-lg tracking-wider text-text">{member.data.member_code}</p>
-              <Link to={`/card/${member.data.id}`} className="mt-2 inline-block text-sm font-semibold text-accent hover:underline">
+              <p dir="ltr" className="font-display mt-2 text-start text-lg tracking-wider text-text">{member.data.member_code}</p>
+              <Link
+                to={`/card/${member.data.id}`}
+                className="focus-ring mt-1 inline-flex min-h-[44px] items-center rounded text-sm font-semibold text-accent hover:underline"
+              >
                 {t('portal.qr.card')}
               </Link>
             </div>
@@ -136,14 +141,14 @@ export function PortalHome() {
         ) : (
           <div className="divide-y divide-border rounded border border-border bg-surface">
             {(notifs.data ?? []).map((n) => (
-              <div key={n.id} className="flex items-start justify-between gap-3 px-4 py-3">
-                <div className={n.status === 'read' ? 'text-faint' : 'text-text'}>
+              <div key={n.id} className="flex flex-col gap-1 px-4 py-3 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
+                <div className={`min-w-0 ${n.status === 'read' ? 'text-faint' : 'text-text'}`}>
                   <p className="text-sm">{locale === 'ar' ? n.message_ar : n.message_en}</p>
                   <p className="mt-0.5 text-xs text-faint">{formatDateTime(n.created_at, locale)}</p>
                 </div>
                 {n.status !== 'read' && (
                   <button
-                    className="shrink-0 text-xs font-semibold text-accent hover:underline"
+                    className="focus-ring inline-flex min-h-[44px] shrink-0 items-center self-start rounded text-xs font-semibold text-accent hover:underline"
                     onClick={async () => {
                       await markNotificationRead(n.id);
                       notifs.reload();

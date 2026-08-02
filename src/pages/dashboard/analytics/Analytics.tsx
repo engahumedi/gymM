@@ -73,12 +73,22 @@ export function Analytics() {
         title={t('analytics.title')}
         action={
           <div className="flex gap-2">
-            <SelectInput value={rangeMonths} onChange={(e) => setRangeMonths(Number(e.target.value))} className="w-auto">
+            <SelectInput
+              value={rangeMonths}
+              onChange={(e) => setRangeMonths(Number(e.target.value))}
+              className="flex-1 sm:w-auto sm:flex-none"
+              aria-label={t('analytics.eyebrow')}
+            >
               <option value={3}>{t('analytics.range.3')}</option>
               <option value={6}>{t('analytics.range.6')}</option>
               <option value={12}>{t('analytics.range.12')}</option>
             </SelectInput>
-            <SelectInput value={branchId} onChange={(e) => setBranchId(e.target.value)} className="w-auto">
+            <SelectInput
+              value={branchId}
+              onChange={(e) => setBranchId(e.target.value)}
+              className="flex-1 sm:w-auto sm:flex-none"
+              aria-label={t('members.filter.branch')}
+            >
               <option value="">{t('common.all')}</option>
               {branches.map((b) => <option key={b.id} value={b.id}>{localizedName(b, locale)}</option>)}
             </SelectInput>
@@ -98,16 +108,16 @@ export function Analytics() {
       ) : (
         <>
           {/* KPI strip — revenue leads, the rest are quieter, hairline-divided */}
-          <div className="mb-14 flex flex-wrap items-end gap-x-10 gap-y-6">
+          <div className="mb-10 flex flex-wrap items-end gap-x-8 gap-y-6 sm:mb-14 sm:gap-x-10">
             {kpis.map((k) => (
-              <div key={k.key} className={k.lead ? 'pe-10 border-e border-border' : ''}>
+              <div key={k.key} className={k.lead ? 'w-full border-b border-border pb-5 sm:w-auto sm:border-b-0 sm:pb-0 sm:pe-10 sm:border-e' : ''}>
                 <p className="eyebrow mb-2">{t(k.key)}</p>
-                <p className={`font-display leading-none ${k.lead ? 'text-4xl' : 'text-2xl'} ${k.tone}`}>{k.value}</p>
+                <p className={`font-display leading-none ${k.lead ? 'text-3xl sm:text-4xl' : 'text-2xl'} ${k.tone}`}>{k.value}</p>
               </div>
             ))}
           </div>
 
-          <div className="grid gap-12 lg:grid-cols-2">
+          <div className="grid gap-10 sm:gap-12 lg:grid-cols-2">
             <ChartPanel titleKey="analytics.chart.revenue" onExport={() => exportCsv('revenue', data.revenueSeries)}>
               <LineChart data={data.revenueSeries} margin={CHART_MARGIN}>
                 <CartesianGrid strokeDasharray="2 4" stroke={GRID} />
@@ -142,9 +152,17 @@ export function Analytics() {
               </BarChart>
             </ChartPanel>
 
-            <section>
+            <section className="min-w-0">
               <ChartHead titleKey="analytics.chart.heatmap" />
-              {data.grid.flat().every((v) => v === 0) ? <EmptyState messageKey="analytics.empty" /> : <Heatmap grid={data.grid} />}
+              {/* The grid needs 36rem to stay legible, so it scrolls inside its
+                  own box instead of pushing the page sideways on a phone. */}
+              {data.grid.flat().every((v) => v === 0) ? (
+                <EmptyState messageKey="analytics.empty" />
+              ) : (
+                <div className="overflow-x-auto">
+                  <Heatmap grid={data.grid} />
+                </div>
+              )}
             </section>
           </div>
         </>
@@ -164,7 +182,10 @@ function ChartHead({ titleKey, onExport }: { titleKey: MessageKey; onExport?: ()
     <div className="mb-4 flex items-center justify-between border-b border-border pb-3">
       <h3 className="text-sm font-semibold text-text">{t(titleKey)}</h3>
       {onExport && (
-        <button onClick={onExport} className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted transition-colors hover:text-text">
+        <button
+          onClick={onExport}
+          className="focus-ring -my-2 inline-flex min-h-[44px] shrink-0 items-center gap-1.5 rounded px-2 text-xs font-semibold text-muted transition-colors hover:text-text"
+        >
           <Download size={14} strokeWidth={1.5} /> {t('analytics.export')}
         </button>
       )}
@@ -174,9 +195,11 @@ function ChartHead({ titleKey, onExport }: { titleKey: MessageKey; onExport?: ()
 
 function ChartPanel({ titleKey, onExport, children }: { titleKey: MessageKey; onExport?: () => void; children: React.ReactElement }) {
   return (
-    <section>
+    // min-w-0 so a chart inside the grid can shrink below its content width
+    // rather than widening the page.
+    <section className="min-w-0">
       <ChartHead titleKey={titleKey} onExport={onExport} />
-      <div dir="ltr" className="h-60">
+      <div dir="ltr" className="h-56 sm:h-60">
         <ResponsiveContainer width="100%" height="100%">{children}</ResponsiveContainer>
       </div>
     </section>

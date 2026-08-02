@@ -2,8 +2,13 @@ import type { InputHTMLAttributes, SelectHTMLAttributes, TextareaHTMLAttributes,
 
 // Inputs sit on the ground with a hairline underlineable border — not white
 // rounded boxes. Focus is a quiet accent border, no ring glow.
+//
+// Two mobile rules bake in here so every form gets them for free:
+//   min-h-[44px]  — a 36px control is under the comfortable tap target.
+//   text-base md:text-sm — iOS Safari zooms the viewport when a focused input's
+//   font-size is below 16px. Desktop (md+) keeps the original text-sm density.
 const base =
-  'w-full rounded bg-surface border border-border px-3 py-2 text-sm text-text outline-none transition-colors ' +
+  'w-full rounded bg-surface border border-border px-3 py-2 min-h-[44px] text-base md:text-sm text-text outline-none transition-colors ' +
   'focus:border-accent placeholder:text-faint disabled:opacity-60';
 
 export function Field({

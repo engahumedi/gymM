@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { Field, SelectInput, TextInput } from '@/components/ui/Field';
 import { EmptyState, ErrorText, InlineLoading, PageHeader } from '@/components/ui/misc';
+import { TableWrap, Th, Td, CardList, DataCard, CardHead, CardMeta, CardRow } from '@/components/dashboard/DataTable';
 
 export function PlansList() {
   const { t, locale } = useI18n();
@@ -22,23 +23,23 @@ export function PlansList() {
     <div className="mx-auto max-w-3xl">
       <PageHeader
         title={t('plans.title')}
-        action={<Button onClick={() => setEditing('new')}>{t('plans.add')}</Button>}
+        action={<Button onClick={() => setEditing('new')} className="w-full sm:w-auto">{t('plans.add')}</Button>}
       />
       {loading ? (
         <InlineLoading />
       ) : plans.length === 0 ? (
         <EmptyState messageKey="sub.empty" />
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full text-start text-sm">
-            <thead className="border-b border-border text-muted">
+        <>
+          <TableWrap>
+            <thead className="border-b border-border">
               <tr>
-                <th className="px-3 py-2 text-start font-medium">{t('plans.col.name')}</th>
-                <th className="px-3 py-2 text-start font-medium">{t('plans.col.duration')}</th>
-                <th className="px-3 py-2 text-start font-medium">{t('plans.col.price')}</th>
-                <th className="px-3 py-2 text-start font-medium">{t('plans.col.freeze')}</th>
-                <th className="px-3 py-2 text-start font-medium">{t('plans.col.access')}</th>
-                <th className="px-3 py-2 text-start font-medium">{t('plans.col.active')}</th>
+                <Th>{t('plans.col.name')}</Th>
+                <Th>{t('plans.col.duration')}</Th>
+                <Th>{t('plans.col.price')}</Th>
+                <Th>{t('plans.col.freeze')}</Th>
+                <Th>{t('plans.col.access')}</Th>
+                <Th>{t('plans.col.active')}</Th>
               </tr>
             </thead>
             <tbody>
@@ -48,19 +49,31 @@ export function PlansList() {
                   className="cursor-pointer border-b border-border hover:bg-surface"
                   onClick={() => setEditing(p)}
                 >
-                  <td className="px-3 py-2 font-medium">{localizedName(p, locale)}</td>
-                  <td className="px-3 py-2">{p.duration_months} {t('common.months')}</td>
-                  <td className="px-3 py-2">{formatCurrency(p.price, locale)}</td>
-                  <td className="px-3 py-2">{p.freeze_allowance_days}</td>
-                  <td className="px-3 py-2">{t(p.all_branches_access ? 'plans.access.all' : 'plans.access.single')}</td>
-                  <td className="px-3 py-2">
-                    <StatusBadge status={p.is_active ? 'active' : 'none'} />
-                  </td>
+                  <Td className="font-medium">{localizedName(p, locale)}</Td>
+                  <Td>{p.duration_months} {t('common.months')}</Td>
+                  <Td>{formatCurrency(p.price, locale)}</Td>
+                  <Td>{p.freeze_allowance_days}</Td>
+                  <Td>{t(p.all_branches_access ? 'plans.access.all' : 'plans.access.single')}</Td>
+                  <Td><StatusBadge status={p.is_active ? 'active' : 'none'} /></Td>
                 </tr>
               ))}
             </tbody>
-          </table>
-        </div>
+          </TableWrap>
+
+          <CardList>
+            {plans.map((p) => (
+              <DataCard key={p.id} onClick={() => setEditing(p)}>
+                <CardHead title={localizedName(p, locale)} aside={<StatusBadge status={p.is_active ? 'active' : 'none'} />} />
+                <CardMeta>
+                  <CardRow label={t('plans.col.price')}>{formatCurrency(p.price, locale)}</CardRow>
+                  <CardRow label={t('plans.col.duration')}>{p.duration_months} {t('common.months')}</CardRow>
+                  <CardRow label={t('plans.col.freeze')}>{p.freeze_allowance_days}</CardRow>
+                  <CardRow label={t('plans.col.access')}>{t(p.all_branches_access ? 'plans.access.all' : 'plans.access.single')}</CardRow>
+                </CardMeta>
+              </DataCard>
+            ))}
+          </CardList>
+        </>
       )}
 
       {editing && (
@@ -124,7 +137,7 @@ function PlanForm({ plan, onClose, onSaved }: { plan: Plan | null; onClose: () =
   return (
     <Modal open onClose={onClose} title={t(plan ? 'plan.edit.title' : 'plan.add.title')}>
       <div className="space-y-3">
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Field label={t('plan.field.name_ar')} required>
             <TextInput value={f.name_ar} onChange={(e) => setF({ ...f, name_ar: e.target.value })} />
           </Field>
@@ -132,7 +145,7 @@ function PlanForm({ plan, onClose, onSaved }: { plan: Plan | null; onClose: () =
             <TextInput dir="ltr" value={f.name_en} onChange={(e) => setF({ ...f, name_en: e.target.value })} />
           </Field>
         </div>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Field label={t('plan.field.duration')} required>
             <SelectInput value={f.duration_months} onChange={(e) => setF({ ...f, duration_months: e.target.value })}>
               {[1, 3, 6, 12].map((n) => (
@@ -144,7 +157,7 @@ function PlanForm({ plan, onClose, onSaved }: { plan: Plan | null; onClose: () =
             <TextInput type="number" step="0.01" min={0} value={f.price} onChange={(e) => setF({ ...f, price: e.target.value })} />
           </Field>
         </div>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Field label={t('plan.field.freeze')}>
             <TextInput type="number" min={0} value={f.freeze_allowance_days} onChange={(e) => setF({ ...f, freeze_allowance_days: e.target.value })} />
           </Field>
@@ -152,11 +165,11 @@ function PlanForm({ plan, onClose, onSaved }: { plan: Plan | null; onClose: () =
             <TextInput type="number" min={1} value={f.sessions_count} onChange={(e) => setF({ ...f, sessions_count: e.target.value })} />
           </Field>
         </div>
-        <label className="flex items-center gap-2 text-sm text-text">
+        <label className="flex min-h-[44px] items-center gap-2 text-sm text-text">
           <input type="checkbox" checked={f.all_branches_access} onChange={(e) => setF({ ...f, all_branches_access: e.target.checked })} />
           {t('plan.field.all_branches')}
         </label>
-        <label className="flex items-center gap-2 text-sm text-text">
+        <label className="flex min-h-[44px] items-center gap-2 text-sm text-text">
           <input type="checkbox" checked={f.is_active} onChange={(e) => setF({ ...f, is_active: e.target.checked })} />
           {t('plan.field.active')}
         </label>

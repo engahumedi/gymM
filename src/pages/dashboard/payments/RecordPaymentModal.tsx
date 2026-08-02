@@ -71,24 +71,27 @@ export function RecordPaymentModal({
           <Field label={t('payments.field.member_search')} required>
             <TextInput value={query} onChange={(e) => setQuery(e.target.value)} placeholder={t('checkin.search')} />
             {matches.length > 0 && (
-              <div className="mt-1 border border-border divide-y divide-border">
+              <div className="mt-1 max-h-64 overflow-y-auto border border-border divide-y divide-border">
                 {matches.map((m) => (
                   <button
                     key={m.id}
-                    className="block w-full px-3 py-2 text-start text-sm hover:bg-surface"
+                    className="focus-ring flex min-h-[48px] w-full flex-col justify-center px-3 py-2 text-start text-sm hover:bg-surface"
                     onClick={() => { setMember(m); setQuery(m.full_name); }}
                   >
                     <span className="font-medium">{m.full_name}</span>
-                    <span dir="ltr" className="ms-2 text-xs text-faint">{m.member_code} · {m.phone}</span>
+                    <span dir="ltr" className="text-start text-xs text-faint">{m.member_code} · {m.phone}</span>
                   </button>
                 ))}
               </div>
             )}
           </Field>
         ) : (
-          <div className="flex items-center justify-between bg-surface-2 px-3 py-2 text-sm">
-            <span className="font-medium">{member.full_name}</span>
-            <button className="text-accent hover:underline" onClick={() => { setMember(null); setSubId(''); }}>
+          <div className="flex min-h-[48px] items-center justify-between gap-3 bg-surface-2 px-3 py-2 text-sm">
+            <span className="min-w-0 truncate font-medium">{member.full_name}</span>
+            <button
+              className="focus-ring inline-flex min-h-[44px] shrink-0 items-center rounded px-2 text-accent hover:underline"
+              onClick={() => { setMember(null); setSubId(''); }}
+            >
               {t('common.cancel')}
             </button>
           </div>
@@ -111,7 +114,7 @@ export function RecordPaymentModal({
               <TextInput type="number" step="0.01" min={0} value={amount} onChange={(e) => setAmount(e.target.value)} />
             </Field>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <Field label={t('sub.field.method')}>
                 <SelectInput value={method} onChange={(e) => setMethod(e.target.value as PaymentMethod)}>
                   {PAYMENT_METHODS.map((m) => (

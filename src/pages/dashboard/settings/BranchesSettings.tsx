@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { Field, TextInput } from '@/components/ui/Field';
 import { EmptyState, ErrorText, InlineLoading, PageHeader } from '@/components/ui/misc';
+import { TableWrap, Th, Td, CardList, DataCard, CardHead, CardMeta, CardRow } from '@/components/dashboard/DataTable';
 
 const DAYS: { key: string; labelKey: MessageKey }[] = [
   { key: 'sun', labelKey: 'day.sun' },
@@ -32,21 +33,21 @@ export function BranchesSettings() {
     <div>
       <PageHeader
         title={t('branches.title')}
-        action={<Button onClick={() => setEditing('new')}>{t('branches.add')}</Button>}
+        action={<Button onClick={() => setEditing('new')} className="w-full sm:w-auto">{t('branches.add')}</Button>}
       />
       {loading ? (
         <InlineLoading />
       ) : branches.length === 0 ? (
         <EmptyState messageKey="sub.empty" />
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full text-start text-sm">
-            <thead className="border-b border-border text-muted">
+        <>
+          <TableWrap>
+            <thead className="border-b border-border">
               <tr>
-                <th className="px-3 py-2 text-start font-medium">{t('branches.col.name')}</th>
-                <th className="px-3 py-2 text-start font-medium">{t('branches.col.city')}</th>
-                <th className="px-3 py-2 text-start font-medium">{t('branches.col.phone')}</th>
-                <th className="px-3 py-2 text-start font-medium">{t('branches.col.active')}</th>
+                <Th>{t('branches.col.name')}</Th>
+                <Th>{t('branches.col.city')}</Th>
+                <Th>{t('branches.col.phone')}</Th>
+                <Th>{t('branches.col.active')}</Th>
               </tr>
             </thead>
             <tbody>
@@ -56,17 +57,29 @@ export function BranchesSettings() {
                   className="cursor-pointer border-b border-border hover:bg-surface"
                   onClick={() => setEditing(b)}
                 >
-                  <td className="px-3 py-2 font-medium">{localizedName(b, locale)}</td>
-                  <td className="px-3 py-2">{b.city ?? '—'}</td>
-                  <td className="px-3 py-2" dir="ltr">{b.phone ?? '—'}</td>
-                  <td className="px-3 py-2">
-                    <StatusBadge status={b.is_active ? 'active' : 'none'} />
-                  </td>
+                  <Td className="font-medium">{localizedName(b, locale)}</Td>
+                  <Td>{b.city ?? '—'}</Td>
+                  <Td dir="ltr" className="text-start">{b.phone ?? '—'}</Td>
+                  <Td><StatusBadge status={b.is_active ? 'active' : 'none'} /></Td>
                 </tr>
               ))}
             </tbody>
-          </table>
-        </div>
+          </TableWrap>
+
+          <CardList>
+            {branches.map((b) => (
+              <DataCard key={b.id} onClick={() => setEditing(b)}>
+                <CardHead title={localizedName(b, locale)} aside={<StatusBadge status={b.is_active ? 'active' : 'none'} />} />
+                <CardMeta>
+                  <CardRow label={t('branches.col.city')}>{b.city ?? '—'}</CardRow>
+                  <CardRow label={t('branches.col.phone')}>
+                    <span dir="ltr" className="inline-block">{b.phone ?? '—'}</span>
+                  </CardRow>
+                </CardMeta>
+              </DataCard>
+            ))}
+          </CardList>
+        </>
       )}
 
       {editing && (
@@ -139,7 +152,7 @@ function BranchForm({ branch, onClose, onSaved }: { branch: Branch | null; onClo
   return (
     <Modal open onClose={onClose} title={t(branch ? 'branches.edit.title' : 'branches.add.title')}>
       <div className="space-y-3">
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Field label={t('branch.field.name_ar')} required>
             <TextInput value={f.name_ar} onChange={(e) => setF({ ...f, name_ar: e.target.value })} />
           </Field>
@@ -147,7 +160,7 @@ function BranchForm({ branch, onClose, onSaved }: { branch: Branch | null; onClo
             <TextInput dir="ltr" value={f.name_en} onChange={(e) => setF({ ...f, name_en: e.target.value })} />
           </Field>
         </div>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Field label={t('branch.field.city')}>
             <TextInput value={f.city} onChange={(e) => setF({ ...f, city: e.target.value })} />
           </Field>
@@ -170,7 +183,7 @@ function BranchForm({ branch, onClose, onSaved }: { branch: Branch | null; onClo
           <div className="space-y-1.5">
             {DAYS.map(({ key, labelKey }) => (
               <div key={key} className="flex items-center gap-2 text-sm">
-                <span className="w-16 shrink-0 text-muted">{t(labelKey)}</span>
+                <span className="w-14 shrink-0 text-muted sm:w-16">{t(labelKey)}</span>
                 <TextInput
                   type="time"
                   value={f.hours[key]?.open ?? ''}
@@ -188,7 +201,7 @@ function BranchForm({ branch, onClose, onSaved }: { branch: Branch | null; onClo
           </div>
         </div>
 
-        <label className="flex items-center gap-2 text-sm text-text">
+        <label className="flex min-h-[44px] items-center gap-2 text-sm text-text">
           <input type="checkbox" checked={f.is_active} onChange={(e) => setF({ ...f, is_active: e.target.checked })} />
           {t('branch.field.active')}
         </label>

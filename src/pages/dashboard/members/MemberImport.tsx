@@ -138,26 +138,29 @@ export function MemberImport() {
       <PageHeader
         eyebrow={t('dashboard.members')}
         title={t('import.title')}
-        action={<Button variant="secondary" onClick={() => navigate('/dashboard/members')}>{t('common.back')}</Button>}
+        action={<Button variant="secondary" onClick={() => navigate('/dashboard/members')} className="w-full sm:w-auto">{t('common.back')}</Button>}
       />
 
       <p className="mb-6 text-sm text-muted">{t('import.desc')}</p>
 
-      <div className="mb-6 flex flex-wrap items-end gap-4">
+      <div className="mb-6 flex flex-wrap items-end gap-3 sm:gap-4">
         {!isReception && (
-          <label className="block">
+          <label className="block w-full sm:w-auto">
             <span className="mb-1.5 block text-xs font-medium tracking-wide text-muted">{t('member.field.branch')}</span>
-            <SelectInput value={branchId} onChange={(e) => setBranchId(e.target.value)} className="w-auto">
+            <SelectInput value={branchId} onChange={(e) => setBranchId(e.target.value)} className="w-full sm:w-auto">
               {branches.map((b) => <option key={b.id} value={b.id}>{localizedName(b, locale)}</option>)}
             </SelectInput>
           </label>
         )}
-        <button className="text-sm text-accent hover:underline" onClick={downloadTemplate}>
+        <button
+          className="focus-ring inline-flex min-h-[44px] items-center rounded text-sm text-accent hover:underline"
+          onClick={downloadTemplate}
+        >
           {t('import.template')}
         </button>
       </div>
 
-      <label className="mb-4 flex w-full cursor-pointer items-center justify-center rounded border border-dashed border-border-strong px-4 py-8 text-sm text-muted hover:border-accent hover:text-text">
+      <label className="focus-within:ring-2 focus-within:ring-accent mb-4 flex w-full cursor-pointer items-center justify-center rounded border border-dashed border-border-strong px-4 py-8 text-center text-sm text-muted hover:border-accent hover:text-text">
         {t('import.choose_file')}
         <input type="file" accept=".csv,text/csv" className="hidden" onChange={onFile} />
       </label>
@@ -203,12 +206,12 @@ export function MemberImport() {
             <div className="mt-5 border-s-2 border-good bg-surface-2 px-3 py-3 text-sm text-text">
               {t('import.done').replace('{ok}', String(result.ok)).replace('{failed}', String(result.failed))}
               <div className="mt-3">
-                <Button onClick={() => navigate('/dashboard/members')}>{t('import.go_members')}</Button>
+                <Button onClick={() => navigate('/dashboard/members')} className="w-full sm:w-auto">{t('import.go_members')}</Button>
               </div>
             </div>
           ) : (
             <div className="mt-5 flex items-center gap-3">
-              <Button onClick={runImport} loading={busy} disabled={validCount === 0 || !effectiveBranch}>
+              <Button onClick={runImport} loading={busy} disabled={validCount === 0 || !effectiveBranch} className="w-full sm:w-auto">
                 {t('import.run').replace('{n}', String(validCount))}
               </Button>
             </div>

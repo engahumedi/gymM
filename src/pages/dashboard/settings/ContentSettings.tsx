@@ -107,8 +107,9 @@ function HeroSection({ gymId, content, onSaved }: { gymId: string; content: Cont
           </Field>
         </div>
         <ErrorText error={error} />
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <Button
+            className="w-full sm:w-auto"
             loading={busy}
             onClick={() =>
               save(gymId, 'hero', {
@@ -172,8 +173,11 @@ function ListSection({
       <div className="max-w-2xl space-y-4">
         {items.map((it, i) => (
           <div key={i} className="rounded border border-border p-3">
-            <div className="mb-2 flex justify-end">
-              <button className="text-xs text-muted hover:text-accent" onClick={() => remove(i)}>
+            <div className="mb-1 flex justify-end">
+              <button
+                className="focus-ring inline-flex min-h-[44px] items-center rounded px-2 text-xs text-muted hover:text-accent"
+                onClick={() => remove(i)}
+              >
                 {t('content.remove')}
               </button>
             </div>
@@ -190,10 +194,10 @@ function ListSection({
             </div>
           </div>
         ))}
-        <Button variant="secondary" onClick={add}>{t('content.add_item')}</Button>
+        <Button variant="secondary" onClick={add} className="w-full sm:w-auto">{t('content.add_item')}</Button>
         <ErrorText error={error} />
-        <div className="flex items-center gap-3 border-t border-border pt-3">
-          <Button loading={busy} onClick={() => save(gymId, sectionKey, { items }, onSaved)}>
+        <div className="flex flex-wrap items-center gap-3 border-t border-border pt-3">
+          <Button loading={busy} onClick={() => save(gymId, sectionKey, { items }, onSaved)} className="w-full sm:w-auto">
             {t('common.save')}
           </Button>
           {saved && <span className="text-sm text-good">{t('settings.saved')}</span>}

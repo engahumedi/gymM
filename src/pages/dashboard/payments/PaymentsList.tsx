@@ -7,6 +7,7 @@ import { methodLabelKey } from '@/lib/display';
 import { formatCurrency, formatDateTime } from '@/lib/format';
 import { Button } from '@/components/ui/Button';
 import { EmptyState, InlineLoading, ErrorText, PageHeader } from '@/components/ui/misc';
+import { TableWrap, Th, Td, CardList, DataCard, CardHead, CardMeta, CardRow } from '@/components/dashboard/DataTable';
 import { RecordPaymentModal } from './RecordPaymentModal';
 
 export function PaymentsList() {
@@ -23,7 +24,7 @@ export function PaymentsList() {
     <div>
       <PageHeader
         title={t('payments.title')}
-        action={<Button onClick={() => setRecording(true)}>{t('payments.record')}</Button>}
+        action={<Button onClick={() => setRecording(true)} className="w-full sm:w-auto">{t('payments.record')}</Button>}
       />
 
       {page.error && (
@@ -39,46 +40,71 @@ export function PaymentsList() {
         <EmptyState messageKey="payments.empty" />
       ) : (
         <>
-          <div className="overflow-x-auto">
-            <table className="w-full text-start text-sm">
-              <thead className="border-b border-border text-muted">
-                <tr>
-                  <th className="px-3 py-2 text-start font-medium">{t('payments.col.date')}</th>
-                  <th className="px-3 py-2 text-start font-medium">{t('payments.col.member')}</th>
-                  <th className="px-3 py-2 text-start font-medium">{t('payments.col.amount')}</th>
-                  <th className="px-3 py-2 text-start font-medium">{t('payments.col.method')}</th>
-                  <th className="px-3 py-2 text-start font-medium">{t('payments.col.receipt')}</th>
-                  <th className="px-3 py-2"></th>
+          <TableWrap>
+            <thead className="border-b border-border">
+              <tr>
+                <Th>{t('payments.col.date')}</Th>
+                <Th>{t('payments.col.member')}</Th>
+                <Th>{t('payments.col.amount')}</Th>
+                <Th>{t('payments.col.method')}</Th>
+                <Th>{t('payments.col.receipt')}</Th>
+                <Th />
+              </tr>
+            </thead>
+            <tbody>
+              {page.rows.map((p) => (
+                <tr key={p.id} className="border-b border-border hover:bg-surface">
+                  <Td className="text-muted">{formatDateTime(p.created_at, locale)}</Td>
+                  <Td className="font-medium text-text">{p.members?.full_name ?? '—'}</Td>
+                  <Td>{formatCurrency(p.amount, locale)}</Td>
+                  <Td>{t(methodLabelKey(p.method))}</Td>
+                  <Td className="font-mono text-xs text-muted">{p.receipt_number ?? '—'}</Td>
+                  <Td className="text-end">
+                    <button
+                      className="focus-ring inline-flex min-h-[44px] items-center rounded px-2 text-sm font-semibold text-accent hover:underline"
+                      onClick={() => navigate(`/receipt/${p.id}`)}
+                    >
+                      {t('payments.print')}
+                    </button>
+                  </Td>
                 </tr>
-              </thead>
-              <tbody>
-                {page.rows.map((p) => (
-                  <tr key={p.id} className="border-b border-border hover:bg-surface">
-                    <td className="px-3 py-2 text-muted">{formatDateTime(p.created_at, locale)}</td>
-                    <td className="px-3 py-2 font-medium text-text">{p.members?.full_name ?? '—'}</td>
-                    <td className="px-3 py-2">{formatCurrency(p.amount, locale)}</td>
-                    <td className="px-3 py-2">{t(methodLabelKey(p.method))}</td>
-                    <td className="px-3 py-2 font-mono text-xs text-muted">{p.receipt_number ?? '—'}</td>
-                    <td className="px-3 py-2 text-end">
-                      <button
-                        className="text-sm font-semibold text-accent hover:underline"
-                        onClick={() => navigate(`/receipt/${p.id}`)}
-                      >
-                        {t('payments.print')}
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+              ))}
+            </tbody>
+          </TableWrap>
 
-          <div className="mt-6 flex items-center justify-between gap-4">
+          {/* Phone: one card per payment, with the print action as a full-width
+              button instead of a 14px text link at the end of a scrolled row. */}
+          <CardList>
+            {page.rows.map((p) => (
+              <DataCard key={p.id}>
+                <CardHead
+                  title={p.members?.full_name ?? '—'}
+                  aside={<span className="font-medium text-text">{formatCurrency(p.amount, locale)}</span>}
+                />
+                <CardMeta>
+                  <CardRow label={t('payments.col.date')}>{formatDateTime(p.created_at, locale)}</CardRow>
+                  <CardRow label={t('payments.col.method')}>{t(methodLabelKey(p.method))}</CardRow>
+                  <CardRow label={t('payments.col.receipt')}>
+                    <span className="font-mono text-xs">{p.receipt_number ?? '—'}</span>
+                  </CardRow>
+                </CardMeta>
+                <Button
+                  variant="secondary"
+                  className="mt-3 w-full"
+                  onClick={() => navigate(`/receipt/${p.id}`)}
+                >
+                  {t('payments.print')}
+                </Button>
+              </DataCard>
+            ))}
+          </CardList>
+
+          <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
             <p className="text-xs text-faint">
               {t('common.showing')} {page.rows.length} {t('common.of')} {page.total}
             </p>
             {page.hasMore && (
-              <Button variant="secondary" loading={page.loadingMore} onClick={page.loadMore}>
+              <Button variant="secondary" loading={page.loadingMore} onClick={page.loadMore} className="w-full sm:w-auto">
                 {t('common.load_more')}
               </Button>
             )}

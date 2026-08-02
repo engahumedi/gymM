@@ -19,6 +19,7 @@ import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { Field, SelectInput, TextInput } from '@/components/ui/Field';
 import { ErrorText, InlineLoading } from '@/components/ui/misc';
+import { TableWrap, Th, Td, CardList, DataCard, CardHead, CardMeta, CardRow } from '@/components/dashboard/DataTable';
 
 function branchName(branches: Branch[], id: string | null, locale: 'ar' | 'en'): string {
   const b = branches.find((x) => x.id === id);
@@ -63,33 +64,34 @@ export function StaffSettings() {
   return (
     <div className="space-y-10">
       <div>
-        <div className="mb-4 flex items-center justify-between">
+        <div className="mb-4 flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
           <h2 className="font-display text-xl text-text">{t('staff.current')}</h2>
-          <Button onClick={() => setInviting(true)}>{t('staff.invite')}</Button>
+          <Button onClick={() => setInviting(true)} className="w-full sm:w-auto">{t('staff.invite')}</Button>
         </div>
         {staff.loading ? (
           <InlineLoading />
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-start text-sm">
-              <thead className="border-b border-border text-muted">
+          <>
+            <TableWrap>
+              <thead className="border-b border-border">
                 <tr>
-                  <th className="px-3 py-2 text-start font-medium">{t('staff.col.name')}</th>
-                  <th className="px-3 py-2 text-start font-medium">{t('staff.col.role')}</th>
-                  <th className="px-3 py-2 text-start font-medium">{t('staff.col.branch')}</th>
+                  <Th>{t('staff.col.name')}</Th>
+                  <Th>{t('staff.col.role')}</Th>
+                  <Th>{t('staff.col.branch')}</Th>
                 </tr>
               </thead>
               <tbody>
                 {(staff.data ?? []).map((m) => (
                   <tr key={m.id} className="border-b border-border">
-                    <td className="px-3 py-2 font-medium">{m.full_name ?? '—'}</td>
-                    <td className="px-3 py-2 text-muted">{t(`role.${m.role}` as MessageKey)}</td>
-                    <td className="px-3 py-2">
+                    <Td className="font-medium">{m.full_name ?? '—'}</Td>
+                    <Td className="text-muted">{t(`role.${m.role}` as MessageKey)}</Td>
+                    <Td>
                       {m.role === 'reception' ? (
                         <SelectInput
                           value={m.branch_id ?? ''}
                           onChange={(e) => reassign(m, e.target.value)}
                           className="max-w-[12rem]"
+                          aria-label={t('staff.col.branch')}
                         >
                           <option value="">{t('staff.no_branch')}</option>
                           {branches.map((b) => (
@@ -99,49 +101,102 @@ export function StaffSettings() {
                       ) : (
                         <span className="text-muted">—</span>
                       )}
-                    </td>
+                    </Td>
                   </tr>
                 ))}
               </tbody>
-            </table>
-          </div>
+            </TableWrap>
+
+            <CardList>
+              {(staff.data ?? []).map((m) => (
+                <DataCard key={m.id}>
+                  <CardHead
+                    title={m.full_name ?? '—'}
+                    aside={<span className="text-sm text-muted">{t(`role.${m.role}` as MessageKey)}</span>}
+                  />
+                  {m.role === 'reception' && (
+                    <CardMeta>
+                      <div>
+                        <dt className="mb-1.5 text-xs text-faint">{t('staff.col.branch')}</dt>
+                        <dd>
+                          <SelectInput
+                            value={m.branch_id ?? ''}
+                            onChange={(e) => reassign(m, e.target.value)}
+                            aria-label={t('staff.col.branch')}
+                          >
+                            <option value="">{t('staff.no_branch')}</option>
+                            {branches.map((b) => (
+                              <option key={b.id} value={b.id}>{localizedName(b, locale)}</option>
+                            ))}
+                          </SelectInput>
+                        </dd>
+                      </div>
+                    </CardMeta>
+                  )}
+                </DataCard>
+              ))}
+            </CardList>
+          </>
         )}
       </div>
 
       {pendingInvites.length > 0 && (
         <div>
           <h2 className="mb-4 font-display text-xl text-text">{t('staff.invites')}</h2>
-          <div className="overflow-x-auto">
-            <table className="w-full text-start text-sm">
-              <thead className="border-b border-border text-muted">
-                <tr>
-                  <th className="px-3 py-2 text-start font-medium">{t('staff.col.email')}</th>
-                  <th className="px-3 py-2 text-start font-medium">{t('staff.col.branch')}</th>
-                  <th className="px-3 py-2 text-start font-medium">{t('staff.col.status')}</th>
-                  <th className="px-3 py-2"></th>
+          <TableWrap>
+            <thead className="border-b border-border">
+              <tr>
+                <Th>{t('staff.col.email')}</Th>
+                <Th>{t('staff.col.branch')}</Th>
+                <Th>{t('staff.col.status')}</Th>
+                <Th />
+              </tr>
+            </thead>
+            <tbody>
+              {pendingInvites.map((inv) => (
+                <tr key={inv.id} className="border-b border-border align-top">
+                  <Td dir="ltr" className="text-start">{inv.email}</Td>
+                  <Td>{branchName(branches, inv.branch_id, locale) || '—'}</Td>
+                  <Td className={isExpired(inv) ? 'text-faint' : 'text-warn'}>
+                    {isExpired(inv) ? t('staff.invite.expired') : t('staff.status.pending')}
+                  </Td>
+                  <Td className="text-end">
+                    <div className="flex flex-col items-end">
+                      <CopyLink token={inv.token} email={inv.email} />
+                      <button
+                        className="focus-ring inline-flex min-h-[44px] items-center rounded px-2 text-xs text-muted hover:text-accent"
+                        onClick={() => revoke(inv)}
+                      >
+                        {t('staff.invite.revoke')}
+                      </button>
+                    </div>
+                  </Td>
                 </tr>
-              </thead>
-              <tbody>
-                {pendingInvites.map((inv) => (
-                  <tr key={inv.id} className="border-b border-border align-top">
-                    <td className="px-3 py-2" dir="ltr">{inv.email}</td>
-                    <td className="px-3 py-2">{branchName(branches, inv.branch_id, locale) || '—'}</td>
-                    <td className={`px-3 py-2 ${isExpired(inv) ? 'text-faint' : 'text-warn'}`}>
+              ))}
+            </tbody>
+          </TableWrap>
+
+          <CardList>
+            {pendingInvites.map((inv) => (
+              <DataCard key={inv.id}>
+                <CardHead
+                  title={<span dir="ltr" className="inline-block break-all text-start">{inv.email}</span>}
+                  aside={
+                    <span className={`text-xs ${isExpired(inv) ? 'text-faint' : 'text-warn'}`}>
                       {isExpired(inv) ? t('staff.invite.expired') : t('staff.status.pending')}
-                    </td>
-                    <td className="px-3 py-2 text-end">
-                      <div className="flex flex-col items-end gap-1.5">
-                        <CopyLink token={inv.token} email={inv.email} />
-                        <button className="text-xs text-muted hover:text-accent" onClick={() => revoke(inv)}>
-                          {t('staff.invite.revoke')}
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                    </span>
+                  }
+                />
+                <CardMeta>
+                  <CardRow label={t('staff.col.branch')}>{branchName(branches, inv.branch_id, locale) || '—'}</CardRow>
+                </CardMeta>
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  <CopyLink token={inv.token} email={inv.email} block />
+                  <Button variant="secondary" onClick={() => revoke(inv)}>{t('staff.invite.revoke')}</Button>
+                </div>
+              </DataCard>
+            ))}
+          </CardList>
         </div>
       )}
 
@@ -160,7 +215,9 @@ export function StaffSettings() {
   );
 }
 
-function CopyLink({ token, email }: { token: string; email: string }) {
+// `block` renders it as a real button in the phone card; the table keeps the
+// quiet text link.
+function CopyLink({ token, email, block }: { token: string; email: string; block?: boolean }) {
   const { t } = useI18n();
   const [copied, setCopied] = useState(false);
   async function copy() {
@@ -172,9 +229,14 @@ function CopyLink({ token, email }: { token: string; email: string }) {
       /* clipboard unavailable */
     }
   }
+  const label = copied ? t('staff.invite.copied') : t('staff.invite.copy');
+  if (block) return <Button variant="secondary" onClick={copy}>{label}</Button>;
   return (
-    <button className="text-xs text-text hover:text-accent" onClick={copy}>
-      {copied ? t('staff.invite.copied') : t('staff.invite.copy')}
+    <button
+      className="focus-ring inline-flex min-h-[44px] items-center rounded px-2 text-xs text-text hover:text-accent"
+      onClick={copy}
+    >
+      {label}
     </button>
   );
 }
@@ -225,14 +287,16 @@ function InviteModal({
           <p className="text-sm text-muted">{t('staff.invite.link')}</p>
           <TextInput dir="ltr" readOnly value={link} onFocus={(e) => e.currentTarget.select()} />
           <p className="text-xs text-faint">{t('staff.invite.expires')}</p>
-          <Button
-            onClick={() => {
-              navigator.clipboard?.writeText(link).catch(() => {});
-            }}
-          >
-            {t('staff.invite.copy')}
-          </Button>
-          <Button variant="secondary" onClick={onSaved}>{t('common.close')}</Button>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <Button
+              onClick={() => {
+                navigator.clipboard?.writeText(link).catch(() => {});
+              }}
+            >
+              {t('staff.invite.copy')}
+            </Button>
+            <Button variant="secondary" onClick={onSaved}>{t('common.close')}</Button>
+          </div>
         </div>
       ) : (
         <div className="space-y-3">

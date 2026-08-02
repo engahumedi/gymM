@@ -46,12 +46,12 @@ export function DashboardHome() {
       ) : (
         <>
           {/* Lead stat — one big number, two quieter ones alongside (asymmetric) */}
-          <div className="mb-14 flex flex-col gap-8 sm:flex-row sm:items-end sm:gap-16">
+          <div className="mb-10 flex flex-col gap-6 sm:mb-14 sm:flex-row sm:items-end sm:gap-16">
             <div>
               <p className="eyebrow mb-2">{t('dash.kpi.members')}</p>
-              <p className="font-display text-7xl leading-none text-text">{counts.total ?? 0}</p>
+              <p className="font-display text-6xl leading-none text-text sm:text-7xl">{counts.total ?? 0}</p>
             </div>
-            <div className="flex gap-12 pb-2">
+            <div className="flex gap-10 pb-2 sm:gap-12">
               <Stat label={t('dash.kpi.expiring')} value={counts.expiring ?? 0} tone="text-warn" />
               <Stat label={t('dash.kpi.pending')} value={counts.pending ?? 0} tone="text-text" />
             </div>
@@ -60,8 +60,10 @@ export function DashboardHome() {
           <PasswordRequestsPanel />
           <FreezeRequestsPanel />
 
-          {/* Alerts — uneven split, hairline lists (no boxes) */}
-          <div className="grid gap-x-16 gap-y-10 md:grid-cols-[1.4fr_1fr]">
+          {/* Alerts — uneven split, hairline lists (no boxes). minmax(0,…) so a
+              long Arabic name shrinks the column instead of widening the page:
+              a grid track defaults to min-content and overflowed at 768px. */}
+          <div className="grid gap-x-10 gap-y-10 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] lg:gap-x-16">
             <AlertList titleKey="dash.alerts.expiring" status="expiring" members={data.expiring.rows} total={data.expiring.total} />
             <AlertList titleKey="dash.alerts.pending" status="pending" members={data.pending.rows} total={data.pending.total} />
             <AlertList titleKey="dash.alerts.expired" status="expired" members={data.expired.rows} total={data.expired.total} />
@@ -96,12 +98,12 @@ function PasswordRequestsPanel() {
       </h3>
       <ul>
         {(data ?? []).map((r) => (
-          <li key={r.id} className="flex flex-wrap items-center justify-between gap-3 border-b border-border py-3 text-sm">
-            <div>
-              <span className="text-text">{r.requested_name ?? r.requested_email}</span>
-              <span dir="ltr" className="ms-3 text-faint">{r.requested_email}</span>
+          <li key={r.id} className="flex flex-col gap-3 border-b border-border py-3 text-sm sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+            <div className="min-w-0">
+              <span className="block text-text sm:inline">{r.requested_name ?? r.requested_email}</span>
+              <span dir="ltr" className="block truncate text-start text-faint sm:ms-3 sm:inline">{r.requested_email}</span>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center">
               <Button loading={busyId === r.id} onClick={() => act(r.id, 'approve')}>{t('pwreq.approve')}</Button>
               <Button variant="secondary" onClick={() => act(r.id, 'reject')}>{t('pwreq.reject')}</Button>
             </div>
@@ -136,13 +138,13 @@ function FreezeRequestsPanel() {
       </h3>
       <ul>
         {(data ?? []).map((r) => (
-          <li key={r.id} className="flex flex-wrap items-center justify-between gap-3 border-b border-border py-3 text-sm">
-            <div>
+          <li key={r.id} className="flex flex-col gap-3 border-b border-border py-3 text-sm sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+            <div className="min-w-0">
               <span className="text-text">{r.members?.full_name ?? '—'}</span>
               <span className="ms-3 text-muted">{r.days} {t('freezereq.days_short')}</span>
-              {r.note && <span className="ms-3 text-faint">· {r.note}</span>}
+              {r.note && <span className="ms-3 break-words text-faint">· {r.note}</span>}
             </div>
-            <div className="flex items-center gap-2">
+            <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center">
               <Button loading={busyId === r.id} onClick={() => act(r.id, 'approve')}>{t('freezereq.approve')}</Button>
               <Button variant="secondary" onClick={() => act(r.id, 'reject')}>{t('freezereq.reject')}</Button>
             </div>
@@ -176,7 +178,7 @@ function AlertList({
   const { t } = useI18n();
   const dot: Record<string, string> = { expiring: 'bg-warn', pending: 'bg-text', expired: 'bg-accent' };
   return (
-    <section>
+    <section className="min-w-0">
       <h3 className="mb-1 flex items-center gap-2 border-b border-border pb-3 text-sm font-semibold text-text">
         <span className={`inline-block h-1.5 w-1.5 rounded-full ${dot[status] ?? 'bg-muted'}`} />
         {t(titleKey)}
@@ -188,9 +190,12 @@ function AlertList({
         <ul>
           {members.map((m) => (
             <li key={m.id}>
-              <Link to={`/dashboard/members/${m.id}`} className="group flex items-center justify-between border-b border-border py-2.5 text-sm">
-                <span className="text-text">{m.full_name}</span>
-                <span dir="ltr" className="flex items-center gap-2 text-faint">
+              <Link
+                to={`/dashboard/members/${m.id}`}
+                className="focus-ring group flex min-h-[48px] items-center justify-between gap-3 border-b border-border py-2 text-sm"
+              >
+                <span className="min-w-0 truncate text-text">{m.full_name}</span>
+                <span dir="ltr" className="flex shrink-0 items-center gap-2 text-faint">
                   {m.phone}
                   <ArrowUpRight {...ICON_SM} className="opacity-0 transition-opacity group-hover:opacity-100" />
                 </span>

@@ -18,6 +18,7 @@ import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { Field, SelectInput, TextInput } from '@/components/ui/Field';
 import { InlineLoading, ErrorText } from '@/components/ui/misc';
+import { TableWrap, Th, Td, CardList, DataCard, CardHead, CardMeta, CardRow } from '@/components/dashboard/DataTable';
 
 export function TrainersSettings() {
   const { t, locale } = useI18n();
@@ -27,20 +28,20 @@ export function TrainersSettings() {
 
   return (
     <section>
-      <div className="mb-4 flex items-center justify-between">
+      <div className="mb-4 flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h2 className="font-display text-xl text-text">{t('trainers.title')}</h2>
-        <Button onClick={() => setEditing('new')}>{t('trainers.add')}</Button>
+        <Button onClick={() => setEditing('new')} className="w-full sm:w-auto">{t('trainers.add')}</Button>
       </div>
       {loading ? (
         <InlineLoading />
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full text-start text-sm">
-            <thead className="border-b border-border text-muted">
+        <>
+          <TableWrap>
+            <thead className="border-b border-border">
               <tr>
-                <th className="px-3 py-2 text-start font-medium">{t('trainer.field.name_ar')}</th>
-                <th className="px-3 py-2 text-start font-medium">{t('trainer.field.specialty_ar')}</th>
-                <th className="px-3 py-2 text-start font-medium">{t('branches.col.active')}</th>
+                <Th>{t('trainer.field.name_ar')}</Th>
+                <Th>{t('trainer.field.specialty_ar')}</Th>
+                <Th>{t('branches.col.active')}</Th>
               </tr>
             </thead>
             <tbody>
@@ -50,18 +51,29 @@ export function TrainersSettings() {
                   className="cursor-pointer border-b border-border hover:bg-surface"
                   onClick={() => setEditing(tr)}
                 >
-                  <td className="px-3 py-2 font-medium">{localizedName(tr, locale)}</td>
-                  <td className="px-3 py-2 text-muted">
+                  <Td className="font-medium">{localizedName(tr, locale)}</Td>
+                  <Td className="text-muted">
                     {locale === 'ar' ? tr.specialty_ar ?? '—' : tr.specialty_en ?? '—'}
-                  </td>
-                  <td className="px-3 py-2">
-                    <StatusBadge status={tr.is_active ? 'active' : 'none'} />
-                  </td>
+                  </Td>
+                  <Td><StatusBadge status={tr.is_active ? 'active' : 'none'} /></Td>
                 </tr>
               ))}
             </tbody>
-          </table>
-        </div>
+          </TableWrap>
+
+          <CardList>
+            {trainers.map((tr) => (
+              <DataCard key={tr.id} onClick={() => setEditing(tr)}>
+                <CardHead title={localizedName(tr, locale)} aside={<StatusBadge status={tr.is_active ? 'active' : 'none'} />} />
+                <CardMeta>
+                  <CardRow label={t('trainer.field.specialty_ar')}>
+                    {locale === 'ar' ? tr.specialty_ar ?? '—' : tr.specialty_en ?? '—'}
+                  </CardRow>
+                </CardMeta>
+              </DataCard>
+            ))}
+          </CardList>
+        </>
       )}
 
       {editing && (
@@ -141,7 +153,7 @@ function TrainerForm({ trainer, onClose, onSaved }: { trainer: Trainer | null; o
   return (
     <Modal open onClose={onClose} title={t(trainer ? 'trainer.edit.title' : 'trainer.add.title')}>
       <div className="space-y-3">
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Field label={t('trainer.field.name_ar')} required>
             <TextInput value={f.name_ar} onChange={(e) => setF({ ...f, name_ar: e.target.value })} />
           </Field>
@@ -149,7 +161,7 @@ function TrainerForm({ trainer, onClose, onSaved }: { trainer: Trainer | null; o
             <TextInput dir="ltr" value={f.name_en} onChange={(e) => setF({ ...f, name_en: e.target.value })} />
           </Field>
         </div>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Field label={t('trainer.field.specialty_ar')}>
             <TextInput value={f.specialty_ar} onChange={(e) => setF({ ...f, specialty_ar: e.target.value })} />
           </Field>
@@ -164,7 +176,7 @@ function TrainerForm({ trainer, onClose, onSaved }: { trainer: Trainer | null; o
             ) : (
               <div className="h-12 w-12 rounded border border-dashed border-border" />
             )}
-            <label className="cursor-pointer rounded border border-border-strong px-3 py-1.5 text-sm text-text hover:bg-surface-2">
+            <label className="focus-within:ring-2 focus-within:ring-accent inline-flex min-h-[44px] cursor-pointer items-center rounded border border-border-strong px-3 text-sm text-text hover:bg-surface-2">
               {uploading ? t('common.loading') : t('identity.logo.upload')}
               <input type="file" accept="image/*" className="hidden" onChange={onPhoto} disabled={uploading} />
             </label>
@@ -178,7 +190,7 @@ function TrainerForm({ trainer, onClose, onSaved }: { trainer: Trainer | null; o
             ))}
           </SelectInput>
         </Field>
-        <label className="flex items-center gap-2 text-sm text-text">
+        <label className="flex min-h-[44px] items-center gap-2 text-sm text-text">
           <input type="checkbox" checked={f.is_active} onChange={(e) => setF({ ...f, is_active: e.target.checked })} />
           {t('trainer.field.active')}
         </label>

@@ -19,28 +19,38 @@ export function PortalLayout() {
 
   return (
     <div className="flex min-h-screen flex-col bg-bg text-text">
-      <header className="border-b border-border">
-        <div className="mx-auto flex max-w-3xl items-center gap-4 px-5 py-4">
-          <div>
+      <header className="sticky top-0 z-30 border-b border-border bg-bg">
+        <div className="mx-auto flex max-w-3xl items-center gap-3 px-4 py-3 sm:px-5 sm:py-4">
+          <div className="min-w-0">
             <BrandMark className="text-lg" logoClass="h-7" />
             <p className="eyebrow mt-0.5">{t('portal.title')}</p>
           </div>
-          <div className="flex items-center gap-4 ms-auto">
-            <span className="hidden text-sm text-muted sm:inline">{profile?.full_name}</span>
+          <div className="flex items-center gap-1 ms-auto sm:gap-4">
+            <span className="hidden max-w-[14rem] truncate text-sm text-muted sm:inline">{profile?.full_name}</span>
             <LangToggle />
-            <button onClick={signOut} className="text-muted transition-colors hover:text-text" aria-label="logout">
+            <button
+              onClick={signOut}
+              className="focus-ring inline-flex h-11 w-11 shrink-0 items-center justify-center rounded text-muted transition-colors hover:text-text"
+              aria-label={t('nav.logout')}
+            >
               <LogOut {...ICON} />
             </button>
           </div>
         </div>
-        <nav className="mx-auto flex max-w-3xl gap-6 px-5">
+        {/* Three destinations fit on a 390px screen, so the portal keeps a tab
+            row rather than a drawer — one tap instead of two. The rows are 48px
+            tall so they are actually tappable, which they were not before. */}
+        <nav
+          className="mx-auto flex max-w-3xl gap-4 overflow-x-auto px-4 sm:gap-6 sm:px-5"
+          aria-label={t('a11y.nav_main')}
+        >
           {navItems.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
               end={item.to === '/portal'}
               className={({ isActive }) =>
-                `-mb-px border-b-2 pb-2.5 text-sm transition-colors ${
+                `focus-ring -mb-px flex min-h-[48px] shrink-0 items-center whitespace-nowrap border-b-2 text-sm transition-colors ${
                   isActive ? 'border-accent text-text' : 'border-transparent text-muted hover:text-text'
                 }`
               }
@@ -51,7 +61,7 @@ export function PortalLayout() {
         </nav>
       </header>
 
-      <main className="mx-auto w-full max-w-3xl flex-1 px-5 py-8">
+      <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-6 sm:px-5 sm:py-8">
         <ReferenceDataProvider>
           <Outlet />
         </ReferenceDataProvider>

@@ -26,12 +26,16 @@ export function SettingsPage() {
     <div>
       <PageHeader eyebrow={t('settings.eyebrow')} title={t('dashboard.settings')} />
 
-      <div className="mb-8 flex gap-1 overflow-x-auto border-b border-border">
+      {/* Five tabs never fit on a phone line: the strip scrolls inside itself,
+          with 48px rows so each one is a real tap target. */}
+      <div className="mb-6 flex gap-1 overflow-x-auto border-b border-border sm:mb-8" role="tablist">
         {TABS.map(({ id, key }) => (
           <button
             key={id}
             onClick={() => setTab(id)}
-            className={`-mb-px whitespace-nowrap border-b-2 px-4 py-2.5 text-sm font-medium transition-colors ${
+            role="tab"
+            aria-selected={tab === id}
+            className={`focus-ring -mb-px flex min-h-[48px] shrink-0 items-center whitespace-nowrap border-b-2 px-3 text-sm font-medium transition-colors sm:px-4 ${
               tab === id
                 ? 'border-accent text-text'
                 : 'border-transparent text-muted hover:text-text'

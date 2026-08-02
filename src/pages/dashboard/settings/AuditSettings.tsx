@@ -4,6 +4,7 @@ import { useAsync } from '@/lib/useAsync';
 import { formatDateTime } from '@/lib/format';
 import type { MessageKey } from '@/i18n/dictionary';
 import { EmptyState, InlineLoading } from '@/components/ui/misc';
+import { TableWrap, Th, Td, CardList, DataCard, CardHead, CardMeta, CardRow } from '@/components/dashboard/DataTable';
 
 // Known action codes → localized label; unknown codes fall back to the raw code.
 const KNOWN = new Set([
@@ -34,28 +35,43 @@ export function AuditSettings() {
       ) : rows.length === 0 ? (
         <EmptyState messageKey="audit.empty" />
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full text-start text-sm">
-            <thead className="border-b border-border text-muted">
+        <>
+          <TableWrap>
+            <thead className="border-b border-border">
               <tr>
-                <th className="px-3 py-2 text-start font-medium">{t('audit.col.time')}</th>
-                <th className="px-3 py-2 text-start font-medium">{t('audit.col.actor')}</th>
-                <th className="px-3 py-2 text-start font-medium">{t('audit.col.action')}</th>
-                <th className="px-3 py-2 text-start font-medium">{t('audit.col.detail')}</th>
+                <Th>{t('audit.col.time')}</Th>
+                <Th>{t('audit.col.actor')}</Th>
+                <Th>{t('audit.col.action')}</Th>
+                <Th>{t('audit.col.detail')}</Th>
               </tr>
             </thead>
             <tbody>
               {rows.map((r) => (
                 <tr key={r.id} className="border-b border-border">
-                  <td className="whitespace-nowrap px-3 py-2 text-faint">{formatDateTime(r.created_at, locale)}</td>
-                  <td className="px-3 py-2">{r.actor_name ?? '—'}</td>
-                  <td className="px-3 py-2 text-text">{actionLabel(r.action)}</td>
-                  <td className="px-3 py-2 text-muted">{detail(r.meta)}</td>
+                  <Td className="whitespace-nowrap text-faint">{formatDateTime(r.created_at, locale)}</Td>
+                  <Td>{r.actor_name ?? '—'}</Td>
+                  <Td className="text-text">{actionLabel(r.action)}</Td>
+                  <Td className="text-muted">{detail(r.meta)}</Td>
                 </tr>
               ))}
             </tbody>
-          </table>
-        </div>
+          </TableWrap>
+
+          <CardList>
+            {rows.map((r) => (
+              <DataCard key={r.id}>
+                <CardHead
+                  title={actionLabel(r.action)}
+                  aside={<span className="text-xs text-faint">{formatDateTime(r.created_at, locale)}</span>}
+                />
+                <CardMeta>
+                  <CardRow label={t('audit.col.actor')}>{r.actor_name ?? '—'}</CardRow>
+                  {detail(r.meta) && <CardRow label={t('audit.col.detail')}>{detail(r.meta)}</CardRow>}
+                </CardMeta>
+              </DataCard>
+            ))}
+          </CardList>
+        </>
       )}
     </div>
   );

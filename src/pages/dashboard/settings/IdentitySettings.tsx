@@ -102,18 +102,22 @@ function IdentityForm({ onReload }: { onReload: () => void }) {
       </div>
 
       <Field label={t('identity.logo')}>
-        <div className="flex items-center gap-4">
+        <div className="flex flex-wrap items-center gap-3 sm:gap-4">
           {f.logo_url ? (
             <img src={f.logo_url} alt="logo" className="h-12 w-12 rounded object-contain" />
           ) : (
             <div className="h-12 w-12 rounded border border-dashed border-border" />
           )}
-          <label className="cursor-pointer rounded border border-border-strong px-3 py-1.5 text-sm text-text hover:bg-surface-2">
+          <label className="focus-within:ring-2 focus-within:ring-accent inline-flex min-h-[44px] cursor-pointer items-center rounded border border-border-strong px-3 text-sm text-text hover:bg-surface-2">
             {uploading ? t('common.loading') : t('identity.logo.upload')}
             <input type="file" accept="image/*" className="hidden" onChange={onLogo} disabled={uploading} />
           </label>
           {f.logo_url && (
-            <button type="button" className="text-sm text-muted hover:text-accent" onClick={() => setF({ ...f, logo_url: '' })}>
+            <button
+              type="button"
+              className="focus-ring inline-flex min-h-[44px] items-center rounded px-2 text-sm text-muted hover:text-accent"
+              onClick={() => setF({ ...f, logo_url: '' })}
+            >
               {t('identity.logo.remove')}
             </button>
           )}
@@ -122,10 +126,10 @@ function IdentityForm({ onReload }: { onReload: () => void }) {
 
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label={t('identity.primary_color')}>
-          <ColorInput value={f.primary_color} onChange={(v) => setF({ ...f, primary_color: v })} />
+          <ColorInput value={f.primary_color} label={t('identity.primary_color')} onChange={(v) => setF({ ...f, primary_color: v })} />
         </Field>
         <Field label={t('identity.secondary_color')}>
-          <ColorInput value={f.secondary_color} onChange={(v) => setF({ ...f, secondary_color: v })} />
+          <ColorInput value={f.secondary_color} label={t('identity.secondary_color')} onChange={(v) => setF({ ...f, secondary_color: v })} />
         </Field>
       </div>
 
@@ -154,8 +158,8 @@ function IdentityForm({ onReload }: { onReload: () => void }) {
       </div>
 
       <ErrorText error={error} />
-      <div className="flex items-center gap-3">
-        <Button onClick={submit} loading={busy}>{t('common.save')}</Button>
+      <div className="flex flex-wrap items-center gap-3">
+        <Button onClick={submit} loading={busy} className="w-full sm:w-auto">{t('common.save')}</Button>
         {saved && <span className="text-sm text-good">{t('settings.saved')}</span>}
       </div>
     </div>
@@ -163,15 +167,15 @@ function IdentityForm({ onReload }: { onReload: () => void }) {
 }
 
 // Native color picker paired with a hex text field (kept in sync).
-function ColorInput({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+function ColorInput({ value, label, onChange }: { value: string; label: string; onChange: (v: string) => void }) {
   return (
     <div className="flex items-center gap-2">
       <input
         type="color"
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="h-9 w-12 shrink-0 cursor-pointer rounded border border-border bg-surface"
-        aria-label="color"
+        className="focus-ring h-11 w-14 shrink-0 cursor-pointer rounded border border-border bg-surface"
+        aria-label={label}
       />
       <TextInput dir="ltr" value={value} onChange={(e) => onChange(e.target.value)} />
     </div>

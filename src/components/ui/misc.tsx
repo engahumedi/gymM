@@ -27,7 +27,7 @@ export function Spinner({ className = '' }: { className?: string }) {
 export function InlineLoading() {
   const { t } = useI18n();
   return (
-    <div className="flex items-center gap-2 py-16 text-sm text-muted">
+    <div className="flex items-center gap-2 py-10 text-sm text-muted sm:py-16">
       <Spinner /> {t('common.loading')}
     </div>
   );
@@ -63,12 +63,15 @@ export function ErrorText({ error }: { error: string | null }) {
 // the side (asymmetric, not centred).
 export function PageHeader({ title, eyebrow, action }: { title: string; eyebrow?: string; action?: ReactNode }) {
   return (
-    <div className="mb-8 flex items-end justify-between gap-4 border-b border-border pb-5">
-      <div>
+    // Below sm the title and its actions stack: side by side, a two-button
+    // action group squeezes an Arabic title into three cramped lines. From sm
+    // upwards the row is exactly as it was.
+    <div className="mb-6 flex flex-col items-start gap-4 border-b border-border pb-4 sm:mb-8 sm:flex-row sm:items-end sm:justify-between sm:pb-5">
+      <div className="min-w-0">
         {eyebrow && <p className="eyebrow mb-1.5">{eyebrow}</p>}
-        <h1 className="font-display text-3xl text-text md:text-4xl">{title}</h1>
+        <h1 className="font-display text-2xl text-text sm:text-3xl md:text-4xl">{title}</h1>
       </div>
-      {action && <div className="shrink-0 pb-1">{action}</div>}
+      {action && <div className="w-full shrink-0 sm:w-auto sm:pb-1">{action}</div>}
     </div>
   );
 }

@@ -122,7 +122,7 @@ export function SubscriptionActionModal({ action, member, subscription, onClose,
         )}
 
         {action === 'new' && (
-          <label className="flex items-center gap-2 text-sm text-text">
+          <label className="flex min-h-[44px] items-center gap-2 text-sm text-text">
             <input type="checkbox" checked={activateNow} onChange={(e) => setActivateNow(e.target.checked)} />
             {t('sub.field.activate_now')}
           </label>
@@ -156,7 +156,7 @@ export function SubscriptionActionModal({ action, member, subscription, onClose,
             <Field label={t('sub.field.amount')}>
               <TextInput type="number" step="0.01" min={0} value={amount} onChange={(e) => setAmount(e.target.value)} />
             </Field>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <Field label={t('sub.field.method')}>
                 <SelectInput value={method} onChange={(e) => setMethod(e.target.value as PaymentMethod)}>
                   {PAYMENT_METHODS.map((m) => (
