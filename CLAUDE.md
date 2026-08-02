@@ -30,12 +30,15 @@ English (LTR) toggle.
 - **All strings via the i18n dictionary — no hardcoded text.** Everything must mirror
   correctly in RTL (layout, tables, charts, icons).
 
-## Current status (2026-08-01)
+## Current status (2026-08-02)
 **All 8 phases done** and verified on the live Supabase project (`hfjyaduiynigylvunnto`);
-deployed to GitHub Pages. UI is an **editorial-athletic** system (dark charcoal ground, one crimson
-accent, self-hosted Reem Kufi / Fraunces / IBM Plex Sans Arabic, thin lucide icons, hairline-and-
-whitespace layout — no cards/glow/emoji). Design tokens live in `src/index.css` +
-`tailwind.config.js`. Develop on branch `claude/gym-system-context-setup-ezbbxk`. See the **Handoff**
+deployed to GitHub Pages. UI is **exaggerated minimalism** on an editorial-athletic base (pure black
+ground, oversized display type, one accent — the gym's own `primary_color`, currently `#8f1d24` —
+self-hosted Reem Kufi / Fraunces / IBM Plex Sans Arabic, thin lucide icons, hairline-and-whitespace
+layout, no cards/glow/emoji). The text colour that sits on a filled accent surface (`--accent-on`)
+is computed for WCAG contrast, so any rebrand colour stays readable. Design tokens live in
+`src/index.css` + `tailwind.config.js`. Develop on branch
+`claude/gym-system-context-setup-ezbbxk`. See the **Handoff**
 section at the top of `PROGRESS.md` for what to request from the user (Supabase URL + anon key for
 `.env`; a `sbp_` PAT to apply migrations over HTTPS) and the sandbox networking notes.
 
@@ -59,8 +62,24 @@ analytics, so aggregation moved into `analytics_overview()` and member lists ont
 branch, and **`npm run test:rls`** — a live RLS regression suite (8 checks) to run after any policy
 change. **Load time (0016):** the public site fetched its content in six round trips to a database in
 `ap-northeast-1` and showed a spinner instead of the page; it is now one `public_site_data()` call,
-cached in `localStorage`, with the hero painting immediately (6 requests → 1, hero at ~185 ms). DB migrations run through `0016`; `supabase/apply_all.sql` is the one-paste bundle.
-Run tests with `npm test`, RLS checks with `npm run test:rls`.
+cached in `localStorage`, with the hero painting immediately (6 requests → 1, hero at ~185 ms).
+
+**Owner requests (migrations 0017–0022, applied live).** **Mobile-first dashboard** — reception
+works from a phone or tablet: bottom tab bar, full-height sheet dialogs, 44px touch targets, tables
+that stack under `sm`. **Sign in with a phone number** (`login_email_for_phone`) — returns an
+account's email only when the password already verifies, rate limited 10 attempts / 15 min per
+number, no SMS provider and no WhatsApp. **Printable monthly report** (`monthly_report()`) — one
+click for the month's revenue, the change against the previous month, the branch split and the
+best-selling plans; SECURITY INVOKER, so reception sees its branch. **Hijri + Gregorian everywhere**
+— `gyms.calendar` decides which one leads, and both are always shown. Critically, the calendar also
+drives the **arithmetic**: subscription terms are computed in the gym's own calendar through a
+1210-row Umm al-Qura table (`hijri_months`, generated from browser ICU) and a single `add_term()`
+that all four subscription RPCs call. A Hijri year is 355 days, not 365 — **10 days per member per
+year** that used to be given away. Date entry keeps the native input and adds a lazily-loaded
+`react-day-picker` Hijri picker (absent from the entry chunk).
+
+DB migrations run through `0022`; `supabase/apply_all.sql` is the one-paste bundle.
+Run tests with `npm test` (49), RLS checks with `npm run test:rls` (8).
 
 **Known follow-ups (not done):** captcha on the public forms (needs a provider key), 15% VAT on
 receipts, real WhatsApp/SMS sending, cross-branch check-in for all-branch plans, SEO/prerender for

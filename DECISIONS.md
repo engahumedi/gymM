@@ -525,12 +525,48 @@ project before it was fixed, and re-tested after.
   client may lead with Gregorian, and neither should need a code change. `BrandProvider` pushes it
   into the formatter at boot, next to the brand colour, so a single setting re-dates the whole app
   the same way a single setting re-skins it.
-- **Storage and arithmetic stay Gregorian, always.** The calendar setting is presentation only —
-  `daysUntil`, expiry maths, the cron job and every report bucket are untouched by it, and a test
-  asserts that the day count is identical under either setting. Mixing display and arithmetic is
-  how this feature would quietly corrupt subscription dates.
-- **Date inputs stay native.** No browser offers a Hijri date picker, and hand-rolling a calendar
-  widget would be a large, bug-prone surface for a field that is entered rarely. The native
-  (Gregorian) input keeps working and the chosen date is echoed underneath in the leading calendar,
-  so the person typing sees both without converting anything in their head. The report's month
-  picker shows the Hijri *span*, since a Gregorian month straddles two Hijri months.
+- **Storage stays Gregorian, always.** Every date is stored as a Gregorian `date` and every
+  *duration* (`daysUntil`, the cron expiry sweep) is counted in real days, because a day is a day in
+  either calendar. What the calendar setting does change is *term length* — see the next section.
+- **The report's month picker shows the Hijri span** as well as the Gregorian month, since a
+  Gregorian month straddles two Hijri months.
+
+## Subscription terms in the gym's own calendar (0020–0022)
+
+The first version of the previous section drew the line in the wrong place: it kept *all*
+arithmetic Gregorian and treated Hijri as a label. That is wrong for the thing this system sells.
+A gym that advertises "اشتراك شهر" in a Hijri country sells a Hijri month, and a Gregorian month is
+longer — over a year the difference is **10 free days per member**, measured live on this project
+(12 terms from 2026-08-02: Hijri → 2027-07-23, 355 days; Gregorian → 2027-08-02, 365 days). The
+displayed date and the computed date now agree, per the gym's setting.
+
+- **The conversion table is data, not code.** `hijri_months` holds the first Gregorian day of every
+  Hijri month from 1400 to 1500 AH (1210 rows), generated from the browser's own ICU Umm al-Qura
+  data — the same source that renders the dates on screen, so display and arithmetic can't drift.
+  Umm al-Qura is a published civil calendar, not an algorithm, so a table is the honest
+  representation; a formula would be a guess that is wrong a few days a year.
+- **Cross-checked against a second implementation.** Against `@tabby_ai/hijri-converter`, the table
+  matches on **every month in 1420–1449 AH (≈1998–2028)** — the window this system operates in.
+  The 401 disagreements over the full 1400–1500 range all sit in the far past and far future, where
+  the two sources use different astronomical criteria; nobody dates a gym subscription there.
+- **One function decides, and every RPC calls it.** `add_term(from, months)` reads `gyms.calendar`
+  and dispatches to `hijri_add_months` or plain Gregorian interval maths. `create_subscription`,
+  `activate_subscription`, `renew_subscription` and `upgrade_subscription` were re-emitted from
+  0004 with their date maths replaced by that one call, so a gym switching calendars in Settings
+  changes the maths everywhere at once and there is no second place to forget.
+- **Out-of-range dates fall back to Gregorian rather than failing.** A date outside 1400–1500 AH
+  returns the Gregorian answer instead of raising: an unusual date must never be able to block a
+  renewal at the front desk. Day-of-month is clamped, so day 30 of a 29-day Hijri month lands on
+  day 29 rather than spilling into the next month.
+- **The monthly report closes on the gym's month.** `monthly_report` derives its period from
+  `hijri_month_range`, and returns the period it actually used (`calendar`, `period_from`,
+  `period_to`) so the printed page can state its own boundaries. Verified live: on Hijri, month
+  `1448-02` covers 2026-07-15 → 2026-08-13; on Gregorian, `2026-07` covers 2026-07-01 → 07-31 —
+  different revenue, both correct for what they claim to be.
+- **The date picker is a maintained library, not ours.** `react-day-picker` ships an Umm al-Qura
+  calendar at its own `/hijri` entry point, so `HijriPicker` is a thin wrapper over it — the
+  ecosystem maintains the calendar engine, we maintain a theme. It is **lazily imported**
+  (103 KB, absent from the entry chunk) because most visits to a form never open a picker, and it
+  sits beside the native `<input type="date">` rather than replacing it: the native control is
+  still the fastest way to type a known date and the only one that gets a numeric keypad on a
+  phone. Whichever way the date is entered, `DateField` echoes the other calendar underneath.

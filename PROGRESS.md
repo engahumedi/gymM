@@ -30,6 +30,9 @@ redesigned (editorial-athletic) and deployed to GitHub Pages.
   the `notify` Edge Function), 15% VAT on receipts, cross-branch check-in for all-branch plans,
   captcha on the public forms (needs a provider key), SEO/prerender for the marketing pages, and a
   deliberate react-router 7 upgrade.
+- **Calendar note:** `gyms.calendar` (`hijri` | `gregorian`) decides which calendar leads in the UI
+  **and** how long a subscription term is. The Umm al-Qura table in `hijri_months` covers
+  1400–1500 AH; dates outside it fall back to Gregorian rather than erroring.
 - **After any migration touching policies, helpers or grants, run `npm run test:rls`** — it signs in
   as the demo accounts and asserts what each role can and cannot reach against the live project. (Done already: white-label Settings, runtime
   brand colors/logo, CSV member import, member QR + reception scan check-in, password reset by
@@ -37,7 +40,7 @@ redesigned (editorial-athletic) and deployed to GitHub Pages.
   job, and Vitest unit tests for `lib/`.)
 - **Live Supabase project:** URL `https://hfjyaduiynigylvunnto.supabase.co` (ref
   `hfjyaduiynigylvunnto`, Postgres 17). Schema + RLS + functions + seed are already applied,
-  **migrations through `0016`** (`supabase/apply_all.sql` is the regenerated one-paste bundle).
+  **migrations through `0022`** (`supabase/apply_all.sql` is the regenerated one-paste bundle).
 - **What a new session must get from the user** (nothing secret is committed):
   1. `VITE_SUPABASE_URL` + **anon** key → create a local `.env` (gitignored) so `npm run
      dev/build` hit the live project. The anon key is client-safe (RLS protects data).
@@ -57,6 +60,55 @@ redesigned (editorial-athletic) and deployed to GitHub Pages.
 
 ## Session notes
 <!-- Append a short report after each phase: what was tested, what passed, what was fixed. -->
+
+### Owner requests: mobile dashboard, phone sign-in, monthly report, Hijri calendar (2026-08-02) ✅
+Four owner requests in one pass, plus the redesign rollout.
+
+**UI redesign, applied to every page.** The marketing site moved to "exaggerated minimalism" —
+black ground, oversized display type, a solid accent ticker, a cream testimonial band, a full-bleed
+accent call-to-action — and the same language was carried through the dashboard, the member portal
+and the print routes. Accent colour is the gym's own `primary_color`; the owner picked `#8f1d24`.
+`--accent-on` (the text colour that sits on a filled accent surface) is now **computed** by taking
+whichever of black/white scores the higher WCAG contrast, because a fixed luminance cut-off left
+mid-tone blues at 4.46:1.
+
+**Mobile + desktop pass.** Full-height sheet dialogs on phones (a centred card pushed tall forms
+below the fold), 44px minimum touch targets, a bottom tab bar for reception on a phone, tables that
+become stacked rows under `sm`, `prefers-reduced-motion` honoured. Reveal-on-scroll got three guards
+after a real bug — the closing call-to-action rendered as an empty coloured band when it was already
+in the viewport at mount; verified 0 hidden blocks across 6 pages × 2 widths. Also fixed a skip link
+of my own making: `href="#main"` is a *route* under hash routing, so it navigated to `#/404`.
+
+**Sign in with a phone number (0017).** `login_email_for_phone` returns an account's email only when
+the supplied password already verifies against it, so it can't be used to map numbers to addresses;
+rate limited to 10 attempts / 15 min per number. Verified live: blocked on the 10th attempt, other
+numbers unaffected. No session is minted in SQL — the client then does an ordinary email sign-in.
+
+**Printable monthly report (0017, 0018, 0022).** One `monthly_report()` call returns the month's
+revenue, the change against the previous month, the per-branch split and the best-selling plans;
+it is SECURITY INVOKER, so reception sees its branch and a super admin sees the gym. Verified
+against direct SQL: 1900.00 / 8 payments for the gym, 1400.00 / 7 for the branch, same month.
+0018 revoked the default `PUBLIC` execute grant.
+
+**Hijri and Gregorian, matched (0019–0022).** Both calendars are shown everywhere a date appears;
+`gyms.calendar` decides which leads. The owner then pushed back on the first cut, correctly: the
+*calculation* has to match the *display*. So subscription terms are now computed in the gym's
+calendar via a 1210-row Umm al-Qura table (`hijri_months`) generated from browser ICU, one
+`add_term()` dispatcher, and the four subscription RPCs re-emitted to call it. Verified live:
+1 term = 30 days (Hijri) vs 31 (Gregorian); 12 terms = **355 vs 365 days — 10 days a year that
+were being given away**; `renew_subscription` extended by one Hijri month; switching
+`gyms.calendar` to `gregorian` produced 365 and back to `hijri` produced 355 again;
+`monthly_report` returned Hijri month 1448-02 (2026-07-15 → 08-13) and Gregorian 2026-07
+(07-01 → 07-31) with correspondingly different revenue. Cross-checked the table against
+`@tabby_ai/hijri-converter`: **0 mismatches across 1420–1449 AH (≈1998–2028)**.
+Date entry keeps the native input and adds a lazily-loaded `react-day-picker` Umm al-Qura picker
+(103 KB, **absent from the entry chunk**); confirmed rendering in Chromium — "صفر ١٤٤٨", Arabic day
+initials, Arabic-Indic numerals, RTL, 30 selectable days, 0 page errors.
+
+**Tested:** `npm run build` ✅ · `npm test` → **49 passed** ✅ · `npm run test:rls` → **8/8 passed**
+against the live project ✅ (including the privilege-escalation check). Test member and payments
+created during live verification were deleted; seed intact (50 members / 59 subscriptions /
+57 payments). Migrations `0017`–`0022` applied live; `supabase/apply_all.sql` regenerated.
 
 ### Marketing-site first-load time (2026-08-01) ✅
 Owner reported the public site sitting on "loading" for a long time on first open. Measured in a

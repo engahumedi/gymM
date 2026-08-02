@@ -12,7 +12,7 @@ import { localizedName } from '@/lib/display';
 import { Field, TextInput, SelectInput, TextArea } from '@/components/ui/Field';
 import { Button } from '@/components/ui/Button';
 import { ErrorText, InlineLoading, PageHeader } from '@/components/ui/misc';
-import { DateHint } from '@/components/ui/DateHint';
+import { DateField } from '@/components/ui/DateField';
 import type { MessageKey } from '@/i18n/dictionary';
 
 const schema = z.object({
@@ -145,14 +145,9 @@ export function MemberForm() {
               <option value="female">{t('member.field.female')}</option>
             </SelectInput>
           </Field>
-          <div>
-            <Field label={t('member.field.dob')}>
-              <TextInput type="date" value={form.dob} onChange={(e) => set('dob', e.target.value)} />
-            </Field>
-            {/* The native picker is Gregorian in every browser; show the date
-                back in the calendar this gym actually reads. */}
-            <DateHint value={form.dob} />
-          </div>
+          <Field label={t('member.field.dob')}>
+            <DateField value={form.dob} onChange={(v) => set('dob', v)} />
+          </Field>
         </div>
 
         <Field label={t('member.field.branch')} required error={fieldErr.branch_id ? t('err.generic') : undefined}>

@@ -503,6 +503,12 @@ export interface MethodSlice extends ReportSlice {
 export interface MonthlyReport {
   month: string;
   prev_month: string;
+  // Which calendar the period was cut on, and the Gregorian days it covers —
+  // a Hijri month does not line up with a Gregorian one, so the report states
+  // the range it actually totalled rather than leaving it implied.
+  calendar: 'hijri' | 'gregorian';
+  periodFrom: string;
+  periodTo: string;
   revenue: number;
   revenue_prev: number;
   payments_count: number;
@@ -533,6 +539,9 @@ export async function fetchMonthlyReport(
   return {
     month: raw?.month ?? month,
     prev_month: raw?.prev_month ?? '',
+    calendar: raw?.calendar === 'gregorian' ? 'gregorian' : 'hijri',
+    periodFrom: raw?.period_from ?? '',
+    periodTo: raw?.period_to ?? '',
     revenue: num(raw?.revenue),
     revenue_prev: num(raw?.revenue_prev),
     payments_count: num(raw?.payments_count),

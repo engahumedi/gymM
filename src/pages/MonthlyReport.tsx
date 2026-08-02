@@ -8,7 +8,7 @@ import { ReferenceDataProvider, useReferenceData } from '@/lib/ReferenceData';
 import { useAsync } from '@/lib/useAsync';
 import { riyadhToday } from '@/lib/analytics';
 import { localizedName } from '@/lib/display';
-import { formatCurrency, formatMonthDual, getGymCalendar } from '@/lib/format';
+import { formatCurrency, formatDateShort } from '@/lib/format';
 import type { PaymentMethod } from '@/lib/database.types';
 import { Button } from '@/components/ui/Button';
 import { Field, SelectInput, TextInput } from '@/components/ui/Field';
@@ -128,7 +128,6 @@ function MonthlyReportSheet() {
 
   const isAdmin = profile?.role === 'super_admin';
   const [month, setMonth] = useState(() => riyadhToday().slice(0, 7));
-  const monthSpan = useMemo(() => formatMonthDual(month, locale), [month, locale]);
   const [branchId, setBranchId] = useState('');
 
   // Reception has no branch choice — RLS already limits them to their own.
@@ -189,12 +188,15 @@ function MonthlyReportSheet() {
                   onChange={(e) => setMonth(e.target.value || month)}
                 />
               </Field>
-              {/* A Gregorian month straddles two Hijri months; show which span
-                  these figures actually cover. */}
-              {monthSpan && (
+              {/* The gym's calendar decides the period, and a Hijri month does
+                  not line up with a Gregorian one — so state the days the
+                  figures below actually cover, as returned by the server. */}
+              {report.data?.periodFrom && report.data?.periodTo && (
                 <p className="mt-1.5 text-xs text-faint">
-                  <span className="text-muted">{getGymCalendar() === 'hijri' ? t('cal.hijri') : t('cal.gregorian')}:</span>{' '}
-                  {monthSpan.primary}
+                  <span className="text-muted">
+                    {report.data.calendar === 'hijri' ? t('cal.hijri') : t('cal.gregorian')}:
+                  </span>{' '}
+                  {formatDateShort(report.data.periodFrom, locale)} – {formatDateShort(report.data.periodTo, locale)}
                 </p>
               )}
             </div>

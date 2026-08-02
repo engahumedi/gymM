@@ -292,6 +292,9 @@ export type AnalyticsOverviewRaw = {
 // sums arrive as JSON numbers or strings depending on the driver, so every
 // numeric is `unknown` here and coerced once in the api layer.
 export type MonthlyReportRaw = {
+  calendar?: string;
+  period_from?: string;
+  period_to?: string;
   month?: string;
   prev_month?: string;
   revenue?: unknown;
