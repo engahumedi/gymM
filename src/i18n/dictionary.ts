@@ -470,6 +470,12 @@ export const dictionary = {
   },
   'pub.plans.featured': { ar: 'الأكثر اختياراً', en: 'Most chosen' },
 
+  // --- accessibility labels (screen readers / keyboard) ---
+  'a11y.skip': { ar: 'تخطَّ إلى المحتوى', en: 'Skip to content' },
+  'a11y.menu': { ar: 'القائمة', en: 'Menu' },
+  'a11y.nav_main': { ar: 'التنقل الرئيسي', en: 'Main navigation' },
+  'a11y.nav_footer': { ar: 'روابط التذييل', en: 'Footer links' },
+
   // Staff
   'staff.title': { ar: 'الموظفون', en: 'Staff' },
   'staff.invite': { ar: 'دعوة موظف', en: 'Invite staff' },
