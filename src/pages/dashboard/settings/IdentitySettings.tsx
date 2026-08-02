@@ -4,8 +4,9 @@ import { useReferenceData } from '@/lib/ReferenceData';
 import { useBrand } from '@/lib/Brand';
 import { updateGym, uploadPublicAsset, type GymPatch } from '@/lib/api';
 import { errorMessageKey } from '@/lib/errors';
+import type { GymCalendar } from '@/lib/database.types';
 import { Button } from '@/components/ui/Button';
-import { Field, TextInput } from '@/components/ui/Field';
+import { Field, SelectInput, TextInput } from '@/components/ui/Field';
 import { ErrorText, InlineLoading } from '@/components/ui/misc';
 
 const SOCIALS: { key: string; labelKey: 'identity.social.instagram' | 'identity.social.twitter' | 'identity.social.tiktok' | 'identity.social.whatsapp' }[] = [
@@ -35,6 +36,7 @@ function IdentityForm({ onReload }: { onReload: () => void }) {
     logo_url: g.logo_url ?? '',
     primary_color: g.primary_color,
     secondary_color: g.secondary_color,
+    calendar: g.calendar ?? 'hijri',
     contact_email: g.contact_email ?? '',
     contact_phone: g.contact_phone ?? '',
     social: { ...(g.social_links ?? {}) } as Record<string, string>,
@@ -73,6 +75,7 @@ function IdentityForm({ onReload }: { onReload: () => void }) {
         logo_url: f.logo_url.trim() || null,
         primary_color: f.primary_color,
         secondary_color: f.secondary_color,
+        calendar: f.calendar,
         contact_email: f.contact_email.trim() || null,
         contact_phone: f.contact_phone.trim() || null,
         social_links: social,
@@ -134,6 +137,19 @@ function IdentityForm({ onReload }: { onReload: () => void }) {
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
+        <div>
+          <Field label={t('cal.setting')}>
+            <SelectInput
+              value={f.calendar}
+              onChange={(e) => setF({ ...f, calendar: e.target.value as GymCalendar })}
+            >
+              <option value="hijri">{t('cal.hijri')}</option>
+              <option value="gregorian">{t('cal.gregorian')}</option>
+            </SelectInput>
+          </Field>
+          <p className="mt-1.5 text-xs text-faint">{t('cal.setting_hint')}</p>
+        </div>
+
         <Field label={t('identity.contact_email')}>
           <TextInput dir="ltr" type="email" value={f.contact_email} onChange={(e) => setF({ ...f, contact_email: e.target.value })} />
         </Field>

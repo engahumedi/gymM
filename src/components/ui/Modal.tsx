@@ -79,14 +79,16 @@ export function Modal({
 
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/60 p-4 pt-[8vh]" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/60 p-0 sm:p-4 sm:pt-[8vh]" onClick={onClose}>
       <div
         ref={panelRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
         tabIndex={-1}
-        className="w-full max-w-md rounded-lg border border-border bg-surface outline-none"
+        // A full-height sheet on a phone (a centred card wastes the screen and
+        // pushes tall forms below the fold), a centred dialog from sm up.
+        className="h-full w-full overflow-y-auto border-border bg-surface outline-none sm:h-auto sm:max-h-[84vh] sm:max-w-md sm:rounded-lg sm:border"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between border-b border-border px-5 py-3.5">

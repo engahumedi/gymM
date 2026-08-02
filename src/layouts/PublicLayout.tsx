@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useI18n } from '@/i18n/I18nProvider';
 import { useAuth } from '@/auth/AuthProvider';
@@ -21,6 +21,7 @@ export function PublicLayout() {
   const { session, profile } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
   const { pathname } = useLocation();
+  const mainRef = useRef<HTMLElement>(null);
 
   // Close the menu on navigation, and never leave the page scroll-locked.
   useEffect(() => {
@@ -41,13 +42,19 @@ export function PublicLayout() {
 
   return (
     <div className="flex min-h-screen flex-col bg-ground text-text">
-      {/* Keyboard users land here first and can jump past the nav. */}
-      <a
-        href="#main"
+      {/* Keyboard users land here first and can jump past the nav. This moves
+          focus directly rather than linking to #main: the app is hash-routed, so
+          an href of "#main" is read as a route and lands on the 404 page. */}
+      <button
+        type="button"
+        onClick={() => {
+          mainRef.current?.focus();
+          mainRef.current?.scrollIntoView({ block: 'start' });
+        }}
         className="focus-ring sr-only focus:not-sr-only focus:absolute focus:z-50 focus:m-3 focus:inline-flex focus:min-h-[44px] focus:items-center focus:rounded-lg focus:bg-block focus:px-4 focus:text-sm focus:text-text"
       >
         {t('a11y.skip')}
-      </a>
+      </button>
 
       <header className="sticky top-0 z-30 border-b border-block-line bg-ground/90 backdrop-blur">
         <div className="mx-auto flex max-w-content items-center gap-6 px-5 py-3.5">
@@ -140,7 +147,7 @@ export function PublicLayout() {
         )}
       </header>
 
-      <main id="main" className="flex-1">
+      <main id="main" ref={mainRef} tabIndex={-1} className="flex-1 outline-none">
         <PublicDataProvider>
           <Outlet />
         </PublicDataProvider>
