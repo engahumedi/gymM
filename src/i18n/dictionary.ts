@@ -476,6 +476,43 @@ export const dictionary = {
   'a11y.nav_main': { ar: 'التنقل الرئيسي', en: 'Main navigation' },
   'a11y.nav_footer': { ar: 'روابط التذييل', en: 'Footer links' },
 
+  // --- sign in by phone (0017) ---
+  'auth.identifier': { ar: 'رقم الجوال أو البريد', en: 'Phone number or email' },
+  'auth.identifier_hint': {
+    ar: 'الأعضاء يدخلون برقم جوالهم. الموظفون بالبريد الإلكتروني.',
+    en: 'Members sign in with their phone number. Staff use their email.',
+  },
+  'err.rate_limited': {
+    ar: 'محاولات كثيرة. انتظر ربع ساعة ثم أعد المحاولة.',
+    en: 'Too many attempts. Wait fifteen minutes and try again.',
+  },
+
+  // --- monthly financial report (0017) ---
+  'report.nav': { ar: 'التقارير', en: 'Reports' },
+  'report.title': { ar: 'التقرير المالي الشهري', en: 'Monthly financial report' },
+  'report.month': { ar: 'الشهر', en: 'Month' },
+  'report.branch_all': { ar: 'كل الفروع', en: 'All branches' },
+  'report.revenue': { ar: 'إيراد الشهر', en: 'Revenue this month' },
+  'report.revenue_prev': { ar: 'الشهر السابق', en: 'Previous month' },
+  'report.change': { ar: 'التغيّر', en: 'Change' },
+  'report.payments_count': { ar: 'عدد العمليات', en: 'Payments' },
+  'report.new_members': { ar: 'أعضاء جدد', en: 'New members' },
+  'report.active_members': { ar: 'أعضاء نشطون', en: 'Active members' },
+  'report.by_branch': { ar: 'الإيراد حسب الفرع', en: 'Revenue by branch' },
+  'report.by_plan': { ar: 'الباقات الأكثر مبيعاً', en: 'Best-selling plans' },
+  'report.by_method': { ar: 'طرق الدفع', en: 'Payment methods' },
+  'report.col.share': { ar: 'النسبة', en: 'Share' },
+  'report.col.count': { ar: 'العدد', en: 'Count' },
+  'report.col.total': { ar: 'المبلغ', en: 'Amount' },
+  'report.print': { ar: 'طباعة', en: 'Print' },
+  'report.generated': { ar: 'أُنشئ في', en: 'Generated' },
+  'report.empty': { ar: 'لا توجد مدفوعات مسجّلة في هذا الشهر.', en: 'No payments recorded for this month.' },
+  'report.unknown_plan': { ar: 'بدون باقة', en: 'No plan' },
+  'method.cash': { ar: 'نقداً', en: 'Cash' },
+  'method.mada': { ar: 'مدى', en: 'Mada' },
+  'method.online': { ar: 'إلكتروني', en: 'Online' },
+  'method.other': { ar: 'أخرى', en: 'Other' },
+
   // Staff
   'staff.title': { ar: 'الموظفون', en: 'Staff' },
   'staff.invite': { ar: 'دعوة موظف', en: 'Invite staff' },

@@ -479,3 +479,28 @@ project before it was fixed, and re-tested after.
 - **Not done, deliberately:** moving the project to a nearer region. Supabase cannot relocate an
   existing project — it means a new project plus a data migration — so it is the owner's call, not a
   side effect of a performance fix. Worth doing if the remaining latency still bothers users.
+
+## Sign in by phone, and the monthly report (0017)
+
+- **Phone sign-in without an SMS bill.** Members are identified by their phone number everywhere
+  in this system and will not remember the email reception typed for them, but Supabase Auth signs
+  in by email and phone auth means paying an SMS provider (WhatsApp was explicitly ruled out).
+  `login_email_for_phone(phone, password)` bridges the two, and the whole design is in one rule:
+  **it returns the account's email only when the supplied password already verifies against it.**
+  A wrong password, an unknown number, or a member with no account are indistinguishable — all
+  return `null` — so it can never be used to map phone numbers to email addresses, which is the
+  obvious way to get this feature wrong. No session is minted in SQL; the client then performs an
+  ordinary email+password sign-in with what it got back, so nothing bypasses GoTrue.
+- **Rate limited per number, 10 attempts / 15 minutes**, because this path would otherwise be a
+  brute-force oracle that skips GoTrue's own throttling. Verified live: blocked on the 10th attempt,
+  other numbers unaffected. The accepted trade-off is that someone can burn a victim's phone
+  shortcut for 15 minutes; the account itself is untouched and still reachable by email.
+- **Numbers are normalised in SQL** (`05…`, `+9665…`, `9665…`, spaces and dashes) so the client
+  cannot be the only thing standing between a valid customer and their account.
+
+- **`monthly_report()` is SECURITY INVOKER**, like `analytics_overview`, so the month a reception
+  user sees is their branch's month and the one a super admin sees is the gym's — no role logic in
+  the client. Verified live against direct SQL: 1900.00 across 8 payments for the gym, 1400.00
+  across 7 for the branch, same month. Amounts are bucketed in Asia/Riyadh like everything else.
+- **The report is a top-level print route**, not a dashboard tab, for the same reason as the receipt
+  and the membership card: `window.print()` then yields the report alone, with no navigation chrome.
