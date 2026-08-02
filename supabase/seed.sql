@@ -24,7 +24,7 @@ insert into public.gyms (id, name_ar, name_en, primary_color, secondary_color, c
 values (
   '11111111-1111-1111-1111-111111111111',
   'أبطال الرياضة', 'Sports Champions',
-  '#e11d2a', '#0f172a',
+  '#8f1d24', '#0f172a',
   'info@powergym.sa', '+966112223344',
   '{"instagram":"https://instagram.com/powergym","twitter":"https://x.com/powergym","tiktok":"https://tiktok.com/@powergym","whatsapp":"+966500000000"}'
 );

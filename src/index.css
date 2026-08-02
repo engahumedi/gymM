@@ -17,7 +17,8 @@
   --text: #ece7df;
   --muted: #8b8b82;
   --faint: #5c5f66;
-  --accent: #c8342f;      /* crimson — smallest touches only */
+  --accent: #8f1d24;      /* deep crimson — the one brand colour (owner's pick) */
+  --accent-on: #ffffff;   /* readable ON a filled accent surface (computed in Brand.tsx) */
   --accent-ink: #f6ede9;
   --sand: #cbb994;        /* second accent — very rare */
   --good: #6f9f6a;

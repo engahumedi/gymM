@@ -18,12 +18,34 @@ function normHex(v: string | null | undefined): string | null {
   return s.startsWith('#') ? s : `#${s}`;
 }
 
+// Relative luminance (WCAG). Used to decide what colour can sit ON the accent.
+function luminance(hex: string): number {
+  const ch = [1, 3, 5].map((i) => {
+    const v = parseInt(hex.slice(i, i + 2), 16) / 255;
+    return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+  });
+  return 0.2126 * ch[0] + 0.7152 * ch[1] + 0.0722 * ch[2];
+}
+
 // Apply the gym's primary brand color to the --accent design token so a rebrand
 // (Settings → Identity) actually re-skins the whole app, not just the DB row.
-// --accent drives the crimson accent everywhere via tailwind.config.js.
+// --accent drives the accent everywhere via tailwind.config.js.
+//
+// --accent-on is the text/icon colour that may sit on top of a filled accent
+// surface. It is computed, not fixed: the marketing site fills whole bands with
+// the accent, and a gym is free to save any colour — hardcoding white text would
+// make a pale brand unreadable. Rather than guess a luminance cut-off, take
+// whichever of black/white actually scores the higher WCAG contrast; a fixed
+// threshold left mid-tone blues just under 4.5:1.
 export function applyBrandColors(gym: Gym | null): void {
   const accent = normHex(gym?.primary_color);
-  if (accent) document.documentElement.style.setProperty('--accent', accent);
+  if (!accent) return;
+  const l = luminance(accent);
+  const onWhite = 1.05 / (l + 0.05); // contrast of white text on the accent
+  const onBlack = (l + 0.05) / 0.05; // contrast of black text on the accent
+  const root = document.documentElement;
+  root.style.setProperty('--accent', accent);
+  root.style.setProperty('--accent-on', onBlack > onWhite ? '#0b0c0e' : '#ffffff');
 }
 
 // index.html is deliberately brand-free (white label), so the document title and

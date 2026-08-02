@@ -26,6 +26,7 @@ export default {
       muted: 'var(--muted)',
       faint: 'var(--faint)',
       accent: 'var(--accent)',
+      'accent-on': 'var(--accent-on)',
       'accent-ink': 'var(--accent-ink)',
       sand: 'var(--sand)',
       good: 'var(--good)',

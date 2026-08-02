@@ -57,7 +57,7 @@ export function HomePage() {
             <div className="mt-12 flex flex-wrap items-center gap-4">
               <Link
                 to="/join"
-                className="focus-ring inline-flex min-h-[56px] items-center rounded-lg bg-accent px-9 text-lg font-bold text-white transition-all duration-200 hover:brightness-110 active:scale-[0.98]"
+                className="focus-ring inline-flex min-h-[56px] items-center rounded-lg bg-accent px-9 text-lg font-bold text-accent-on transition-all duration-200 hover:brightness-110 active:scale-[0.98]"
               >
                 {t('pub.hero.cta')}
               </Link>
@@ -99,7 +99,7 @@ export function HomePage() {
             {[0, 1].map((copy) => (
               <div key={copy} className="flex shrink-0 items-center" aria-hidden={copy === 1}>
                 {facilities.map((f, i) => (
-                  <span key={i} className="flex items-center whitespace-nowrap px-8 text-lg font-bold text-white">
+                  <span key={i} className="flex items-center whitespace-nowrap px-8 text-lg font-bold text-accent-on">
                     {locale === 'ar' ? f.ar : f.en}
                     <span className="px-8 opacity-50">/</span>
                   </span>
@@ -118,9 +118,9 @@ export function HomePage() {
           <div className="grid gap-4 sm:grid-cols-2 lg:[grid-template-columns:repeat(auto-fit,minmax(15rem,1fr))]">
             {featured && (
               <Reveal>
-                <article className="flex h-full flex-col justify-between rounded-lg bg-accent p-8 text-white">
+                <article className="flex h-full flex-col justify-between rounded-lg bg-accent p-8 text-accent-on">
                   <div>
-                    <span className="inline-flex rounded bg-black/25 px-3 py-1 text-xs font-bold">
+                    <span className="inline-flex rounded border border-current px-3 py-1 text-xs font-bold">
                       {t('pub.plans.featured')}
                     </span>
                     <h3 className="mt-6 text-base font-semibold opacity-80">{localizedName(featured, locale)}</h3>
@@ -144,7 +144,7 @@ export function HomePage() {
                   </div>
                   <Link
                     to={`/join?plan=${featured.id}`}
-                    className="focus-ring mt-8 inline-flex min-h-[52px] items-center justify-center rounded-lg bg-white px-6 text-base font-bold text-paper-ink transition-transform duration-200 hover:scale-[1.02] active:scale-[0.98]"
+                    className="focus-ring mt-8 inline-flex min-h-[52px] items-center justify-center rounded-lg bg-accent-on px-6 text-base font-bold text-accent transition-transform duration-200 hover:scale-[1.02] active:scale-[0.98]"
                   >
                     {t('pub.plans.choose')}
                   </Link>
@@ -225,7 +225,7 @@ export function HomePage() {
               <Reveal key={tr.id} delay={60 * i}>
                 <div className="block-panel group h-full overflow-hidden">
                   <div className="flex h-40 items-center justify-center bg-block-2 transition-colors duration-200 group-hover:bg-accent">
-                    <span className="font-display text-7xl leading-none text-accent transition-colors duration-200 group-hover:text-white">
+                    <span className="font-display text-7xl leading-none text-accent transition-colors duration-200 group-hover:text-accent-on">
                       {(locale === 'ar' ? tr.name_ar : tr.name_en).charAt(0)}
                     </span>
                   </div>
@@ -292,7 +292,7 @@ export function HomePage() {
       )}
 
       {/* ══ CLOSING — full-bleed accent, one action ═══════════════════════ */}
-      <section id="contact" className="bg-accent py-20 text-white md:py-28">
+      <section id="contact" className="bg-accent py-20 text-accent-on md:py-28">
         <div className="mx-auto max-w-content px-5">
           <Reveal>
             <div className="flex flex-col gap-10 md:flex-row md:items-end md:justify-between">
@@ -306,7 +306,7 @@ export function HomePage() {
               </div>
               <Link
                 to="/join"
-                className="focus-ring inline-flex min-h-[60px] shrink-0 items-center rounded-lg bg-white px-10 text-lg font-bold text-paper-ink transition-transform duration-200 hover:scale-[1.03] active:scale-[0.98]"
+                className="focus-ring inline-flex min-h-[60px] shrink-0 items-center rounded-lg bg-accent-on px-10 text-lg font-bold text-accent transition-transform duration-200 hover:scale-[1.03] active:scale-[0.98]"
               >
                 {t('pub.hero.cta')}
               </Link>
